@@ -4,11 +4,16 @@ import (
 	"net"
 	"runtime/debug"
 
+	"github.com/Alienero/spp"
+
 	"github.com/golang/glog"
 )
 
 type conn struct {
+	// net's Connection
 	rw net.Conn
+	// Small pack Connection
+	// packRW spp.Conn
 }
 
 func newConn(rw net.Conn) *conn {
@@ -30,6 +35,32 @@ func (c *conn) serve() {
 		glog.Errorf("conn.SetKeepAlive() error(%v)\n", err)
 		return
 	}
-	// TODO: 连接认证，离线消息
+	// TODO: get the offline msg
+	// Init the ssp
+	packRW := spp.NewConn(c.rw)
+	pack, err := c.packRW.ReadPack()
+	if err != nil {
+		glog.Errorf("Recive login pack error:%v \n", err)
+	}
+	if !c.login(pack) {
+		return
+	}
+	body, err := getLoginResponse("1", "127.0.0.1", true, "")
+	if err != nil {
+		return
+	}
+	pack, _ = packRW.SetDefaultPack(LOGIN, body)
+	err = packRW.WritePack(pack)
+	if err != nil {
+		return
+	}
+	newClient(packRW).clientLoop()
 
+}
+func (c *conn) login(pack *spp.Pack) bool {
+	if pack.Typ != LOGIN {
+		glog.Errorf("Recive login pack's type error:%v \n", pack.Typ)
+		return false
+	}
+	return true
 }
