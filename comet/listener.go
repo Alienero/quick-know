@@ -8,12 +8,13 @@ import (
 )
 
 func StartListen() error {
+	var tempDelay time.Duration // how long to sleep on accept failure
 	l, err := net.Listen("tcp", Conf.Listen_addr)
 	if err != nil {
 		return err
 	}
 	for {
-		rw, err := l.Accept()
+		rw, e := l.Accept()
 		if ne, ok := e.(net.Error); ok && ne.Temporary() {
 			if tempDelay == 0 {
 				tempDelay = 5 * time.Millisecond

@@ -3,7 +3,7 @@ package comet
 import (
 	"encoding/json"
 
-	"github.com/Alienero/spp"
+	// "github.com/Alienero/spp"
 )
 
 // Socket protocol
@@ -25,13 +25,27 @@ type loginResponse struct {
 	ID   string
 	Addr string
 
-	State bool
-	Info  string
+	Status bool
+	Info   string
 }
 
-func getLoginResponse(id, addr string, state bool, info string) ([]byte, error) {
-	resp := &loginResponse{id, addr, state, info}
-	body, err := json.Marshal(resp)
+func getLoginResponse(id, addr string, status bool, info string) ([]byte, error) {
+	resp := &loginResponse{id, addr, status, info}
+	return marshalJson(resp)
+}
+
+type beat_heart struct{}
+type beat_heartResp struct {
+	Status bool
+}
+
+func getbeat_heartResp(status bool) ([]byte, error) {
+	resp := beat_heartResp{status}
+	return marshalJson(resp)
+}
+
+func marshalJson(v interface{}) ([]byte, error) {
+	body, err := json.Marshal(v)
 	if err != nil {
 		return nil, err
 	}

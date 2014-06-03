@@ -9,6 +9,8 @@ var Conf = &config{}
 
 type config struct {
 	Listen_addr string
+
+	WirteLoopChanNum int // Should > 1
 }
 
 func InitConf() error {
@@ -20,4 +22,5 @@ func InitConf() error {
 	if err != nil {
 		return err
 	}
+	return nil
 }

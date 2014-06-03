@@ -9,6 +9,7 @@ import (
 	"github.com/golang/glog"
 )
 
+// Process connetion settings
 type conn struct {
 	// net's Connection
 	rw net.Conn
@@ -24,7 +25,7 @@ func newConn(rw net.Conn) *conn {
 func (c *conn) serve() {
 	var err error
 	defer func() {
-		if err = recover(); err != nil {
+		if err := recover(); err != nil {
 			glog.Errorf("conn.serve() panic(%v)\n info:%s", err, string(debug.Stack()))
 		}
 		c.rw.Close()
@@ -37,8 +38,8 @@ func (c *conn) serve() {
 	}
 	// TODO: get the offline msg
 	// Init the ssp
-	packRW := spp.NewConn(c.rw)
-	pack, err := c.packRW.ReadPack()
+	packRW := spp.NewConn(tcp)
+	pack, err := packRW.ReadPack()
 	if err != nil {
 		glog.Errorf("Recive login pack error:%v \n", err)
 	}
