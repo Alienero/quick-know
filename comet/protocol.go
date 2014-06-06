@@ -21,15 +21,15 @@ type loginRequst struct {
 
 	Subscribe string
 }
-type loginResponse struct {
-	ID   string
-	Addr string
-
-	Status bool
-	Info   string
-}
 
 func getLoginResponse(id, addr string, status bool, info string) ([]byte, error) {
+	type loginResponse struct {
+		ID   string
+		Addr string
+
+		Status bool
+		Info   string
+	}
 	resp := &loginResponse{id, addr, status, info}
 	return marshalJson(resp)
 }
