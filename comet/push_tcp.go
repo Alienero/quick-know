@@ -1,6 +1,7 @@
 package comet
 
 import (
+	"fmt"
 	"net"
 	"runtime/debug"
 
@@ -39,29 +40,51 @@ func (c *conn) serve() {
 	// TODO: get the offline msg
 	// Init the ssp
 	packRW := spp.NewConn(tcp)
-	pack, err := packRW.ReadPack()
-	if err != nil {
-		glog.Errorf("Recive login pack error:%v \n", err)
-	}
-	if !c.login(pack) {
+	// pack, err := packRW.ReadPack()
+	// if err != nil {
+	// 	glog.Errorf("Recive login pack error:%v \n", err)
+	// }
+	var l listener
+	if l, err = c.login(packRW); err != nil {
+		glog.Errorf("Login error :%v\n", err)
 		return
 	}
 	body, err := getLoginResponse("1", "127.0.0.1", true, "")
 	if err != nil {
 		return
 	}
-	pack, _ = packRW.SetDefaultPack(LOGIN, body)
+	pack, _ := packRW.SetDefaultPack(LOGIN, body)
 	err = packRW.WritePack(pack)
 	if err != nil {
 		return
 	}
-	newClient(packRW).clientLoop()
+	l.listen_loop()
 
 }
-func (c *conn) login(pack *spp.Pack) bool {
-	if pack.Typ != LOGIN {
-		glog.Errorf("Recive login pack's type error:%v \n", pack.Typ)
-		return false
+func (c *conn) login(rw *spp.Conn) (l listener, err error) {
+	var pack *spp.Pack
+	pack, err = rw.ReadPack()
+	if err != nil {
+		return
 	}
-	return true
+	if pack.Typ != LOGIN {
+		err = fmt.Errorf("Recive login pack's type error:%v \n", pack.Typ)
+		return
+	}
+	// Marshal Json
+	var req *loginRequst
+	req, err = getLoginRequst(pack.Body)
+	if err != nil {
+		return
+	}
+	//TODO: DB Check
+	switch req.Typ {
+	case 0:
+		l = newClient(rw)
+	case 1:
+		l = newCServer(rw)
+	default:
+		fmt.Errorf("No such pack type :%v", pack.Typ)
+	}
+	return
 }

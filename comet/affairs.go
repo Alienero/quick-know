@@ -1,9 +1,11 @@
 package comet
 
 import (
+	"fmt"
+
 	"github.com/Alienero/spp"
 
-	"github.com/golang/glog"
+	// "github.com/golang/glog"
 )
 
 var handles = make(map[int]handler)
@@ -21,6 +23,9 @@ func addHandle(typ int, f handle) {
 	handles[typ] = f
 }
 
+type listener interface {
+	listen_loop() error
+}
 type client struct {
 	// Write loop chan
 	writeChan chan *spp.Pack
@@ -49,28 +54,32 @@ func newClient(rw *spp.Conn) *client {
 		rw:        rw,
 	}
 }
-func (c *client) clientLoop() {
+func (c *client) listen_loop() (err error) {
 	defer func() {
 		// Close the res
 		close(c.writeChan)
 	}()
+	var pack *spp.Pack
 	for {
 		// Listen
-		pack, err := c.rw.ReadPack()
+		pack, err = c.rw.ReadPack()
 		if err != nil {
-			glog.Errorf("clientLoop read pack error:%v\n", err)
+			// glog.Errorf("clientLoop read pack error:%v\n", err)
+			break
 		}
 		f := handles[pack.Typ]
 		if f == nil {
-			return
+			err = fmt.Errorf("No such pack type:%v", pack.Typ)
+			break
 		}
 		// Call function f
 		err = f.serve(c, pack)
 		if err != nil {
-			glog.Errorf("clientLoop() f.serve() error:%v\n", err)
+			// glog.Errorf("clientLoop() f.serve() error:%v\n", err)
 			break
 		}
 	}
+	return
 }
 
 // Server write queue
@@ -98,3 +107,15 @@ loop:
 		}
 	}
 }
+
+// Control server
+type ControlServer struct {
+	conn *spp.Conn
+}
+
+func newCServer(rw *spp.Conn) *ControlServer {
+	return &ControlServer{
+		conn: rw,
+	}
+}
+func (c *ControlServer) listen_loop() error { return nil }

@@ -18,8 +18,16 @@ const (
 type loginRequst struct {
 	UserName string
 	Psw      string
+	// 1 is Control server , 0 is client
+	Typ byte
 
-	Subscribe string
+	// Subscribe string
+}
+
+func getLoginRequst(data []byte) (l *loginRequst, err error) {
+	l = new(loginRequst)
+	err = unMarshalJson(data, l)
+	return
 }
 
 func getLoginResponse(id, addr string, status bool, info string) ([]byte, error) {
@@ -50,4 +58,7 @@ func marshalJson(v interface{}) ([]byte, error) {
 		return nil, err
 	}
 	return body, nil
+}
+func unMarshalJson(data []byte, v interface{}) error {
+	return json.Unmarshal(data, v)
 }
