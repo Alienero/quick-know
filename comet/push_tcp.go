@@ -11,9 +11,9 @@ import (
 	"github.com/golang/glog"
 )
 
-func StartListen() error {
+func startListen(typ int, addr string) error {
 	var tempDelay time.Duration // how long to sleep on accept failure
-	l, err := net.Listen("tcp", Conf.Listen_addr)
+	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
 	}
@@ -33,7 +33,7 @@ func StartListen() error {
 			glog.Errorf("http: Accept error: %v; retrying in %v", e, tempDelay)
 			return e
 		}
-		c := newConn(rw)
+		c := newConn(rw, typ)
 		go c.serve()
 	}
 }
@@ -42,15 +42,18 @@ func StartListen() error {
 type conn struct {
 	// net's Connection
 	rw net.Conn
-	// Small pack Connection
-	// packRW spp.Conn
+	// The conn's listen type
+	typ int
 }
 
-func newConn(rw net.Conn) *conn {
+func newConn(rw net.Conn, typ int) *conn {
 	return &conn{
-		rw: rw,
+		rw:  rw,
+		typ: typ,
 	}
 }
+
+// Do login check and response or push
 func (c *conn) serve() {
 	var err error
 	defer func() {
@@ -67,15 +70,9 @@ func (c *conn) serve() {
 		glog.Errorf("conn.SetKeepAlive() error(%v)\n", err)
 		return
 	}
-	// TODO: get the offline msg
-	// Init the ssp
 	packRW := spp.NewConn(tcp)
-	// pack, err := packRW.ReadPack()
-	// if err != nil {
-	// 	glog.Errorf("Recive login pack error:%v \n", err)
-	// }
 	var l listener
-	if l, err = c.login(packRW); err != nil {
+	if l, err = login(packRW, c.typ); err != nil {
 		glog.Errorf("Login error :%v\n", err)
 		return
 	}
@@ -89,9 +86,9 @@ func (c *conn) serve() {
 		return
 	}
 	l.listen_loop()
-
 }
-func (c *conn) login(rw *spp.Conn) (l listener, err error) {
+
+func login(rw *spp.Conn, typ int) (l listener, err error) {
 	var pack *spp.Pack
 	pack, err = rw.ReadPack()
 	if err != nil {
@@ -107,11 +104,14 @@ func (c *conn) login(rw *spp.Conn) (l listener, err error) {
 	if err != nil {
 		return
 	}
+	if req.Typ != typ {
+		return nil, fmt.Errorf("request type error:%v", req.Typ)
+	}
 	//TODO: DB Check
 	switch req.Typ {
-	case 0:
+	case CLIENT:
 		l = newClient(rw)
-	case 1:
+	case CSERVER:
 		l = newCServer(rw)
 	default:
 		fmt.Errorf("No such pack type :%v", pack.Typ)
@@ -124,81 +124,88 @@ type listener interface {
 	listen_loop() error
 }
 
-// For call the serve
-type handle func(c interface{}, pack *spp.Pack) error
-
-func (h handle) serve(c interface{}, pack *spp.Pack) error {
-	return h(c, pack)
-}
-
 // The Listen implement
-type listen struct {
-	// Write loop chan
-	WriteChan chan *spp.Pack
-	// Write error
-	writeError error
+// type listen struct {
+// 	queue *PackQueue
 
-	// Pack connection
-	Rw *spp.Conn
-	// Handles
-	Handles map[int]handle
-}
-
-// func (l *listen) initListen(rw *spp.Conn) {
-// 	l.rw = rw
-// writeChan:
-// 	make(chan *spp.Pack, Conf.WirteLoopChanNum)
+// 	// Handles
+// 	Handles map[int]handle
 // }
-func (l *listen) listen_loop() (err error) {
-	defer func() {
-		// Close the res
-		close(l.WriteChan)
-	}()
-	var pack *spp.Pack
-	for {
-		// Listen
-		pack, err = l.Rw.ReadPack()
-		if err != nil {
-			// glog.Errorf("clientLoop read pack error:%v\n", err)
-			break
-		}
-		f := l.Handles[pack.Typ]
-		if f == nil {
-			err = fmt.Errorf("No such pack type:%v", pack.Typ)
-			break
-		}
-		// Call function f
-		err = f.serve(l, pack)
-		if err != nil {
-			// glog.Errorf("clientLoop() f.serve() error:%v\n", err)
-			break
-		}
-	}
-	return
+
+// Need own
+// func (l *listen) listen_loop() (err error) {
+// 	defer func() {
+// 		// Close the res
+// 		close(l.WriteChan)
+// 	}()
+// 	var pack *spp.Pack
+// 	for {
+// 		// Listen
+// 		pack, err = l.Rw.ReadPack()
+// 		if err != nil {
+// 			// glog.Errorf("clientLoop read pack error:%v\n", err)
+// 			break
+// 		}
+// 		f := l.Handles[pack.Typ]
+// 		if f == nil {
+// 			err = fmt.Errorf("No such pack type:%v", pack.Typ)
+// 			break
+// 		}
+// 		// Call function f
+// 		err = f.serve(l, pack)
+// 		if err != nil {
+// 			// glog.Errorf("clientLoop() f.serve() error:%v\n", err)
+// 			break
+// 		}
+// 	}
+// 	return
+// }
+
+// Tcp write queue
+type PackQueue struct {
+	// The last error in the tcp connection
+	writeError error
+	writeChan  chan *spp.Pack
+	// Pack connection
+	rw *spp.Conn
 }
 
-// Server write queue
-func (l *listen) writePack(pack *spp.Pack) error {
-	if l.writeError != nil {
-		return l.writeError
+func NewPackQueue(rw *spp.Conn) *PackQueue {
+	return &PackQueue{
+		rw:        rw,
+		writeChan: make(chan *spp.Pack, Conf.WirteLoopChanNum),
 	}
-	l.WriteChan <- pack
-	return nil
 }
-func (l *listen) writeLoop() {
+func (queue *PackQueue) writeLoop() {
 loop:
 	for {
 		select {
-		case pack := <-l.WriteChan:
+		case pack := <-queue.writeChan:
 			if pack == nil {
 				break loop
 			}
-			err := l.Rw.WritePack(pack)
+			err := queue.rw.WritePack(pack)
 			if err != nil {
 				// Tell listen error
-				l.writeError = err
+				queue.writeError = err
 				break loop
 			}
 		}
 	}
+}
+
+// Server write queue
+func (queue *PackQueue) WritePack(pack *spp.Pack) error {
+	if queue.writeError != nil {
+		return queue.writeError
+	}
+	queue.writeChan <- pack
+	return nil
+}
+func (queue *PackQueue) ReadPack() (*spp.Pack, error) {
+	return queue.rw.ReadPack()
+}
+func (queue *PackQueue) Close() error {
+	close(queue.writeChan)
+	return nil
 }

@@ -8,6 +8,9 @@ import (
 
 // Socket protocol
 const (
+	CLIENT  = 0
+	CSERVER = 1
+
 	PUSH_INFO  = 21
 	HEART_BEAT = 31
 
@@ -19,7 +22,7 @@ type loginRequst struct {
 	UserName string
 	Psw      string
 	// 1 is Control server , 0 is client
-	Typ byte
+	Typ int
 
 	// Subscribe string
 }
