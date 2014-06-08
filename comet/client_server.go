@@ -3,8 +3,8 @@ package comet
 import (
 	// "fmt"
 
+	"github.com/Alienero/quick-know/store"
 	"github.com/Alienero/spp"
-	"giuhub.com/Alienero/quick-know/store"
 
 	// "github.com/golang/glog"
 )
@@ -13,7 +13,7 @@ type client struct {
 	queue *PackQueue
 	id    string
 
-	offlines chan *OfflineMsg
+	offlines chan *store.Msg
 }
 
 func (c *client) listen_loop() error {

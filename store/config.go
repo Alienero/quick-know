@@ -6,8 +6,9 @@ type config struct {
 	UserAddr string
 	UserName string
 
-	MsgAddr string
-	MsgName string
+	MsgAddr     string
+	MsgName     string
+	OfflineName string
 
 	OfflineMsgs int
 }
