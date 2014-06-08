@@ -11,6 +11,8 @@ type config struct {
 	Listen_addr string
 
 	WirteLoopChanNum int // Should > 1
+
+	ReadPackLoop int
 }
 
 func InitConf() error {

@@ -10,11 +10,15 @@ var sei_user *mgo.Session
 var sei_msg *mgo.Session
 
 func Init() (err error) {
-	connect(sei_user, Config.UserAddr)
-	connect(sei_msg, Config.MsgAddr)
+	err = connect(sei_user, Config.UserAddr)
+	if err != nil {
+		return
+	}
+	err = connect(sei_msg, Config.MsgAddr)
+	return
 }
 
-func connect(sei *mgo.Session, addr string) {
+func connect(sei *mgo.Session, addr string) (err error) {
 	if sei != nil {
 		sei.Close()
 	}
@@ -22,4 +26,5 @@ func connect(sei *mgo.Session, addr string) {
 	sei.EnsureSafe(&mgo.Safe{})
 	sei.SetMode(mgo.Monotonic, true)
 	sei.Refresh()
+	return
 }

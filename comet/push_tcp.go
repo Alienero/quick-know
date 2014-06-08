@@ -235,6 +235,24 @@ func (queue *PackQueue) ReadPack() (pack *spp.Pack, err error) {
 	}
 	return
 }
+
+// Only call once
+func (queue *PackQueue) ReadPackInLoop() <-chan packAndErr {
+	ch := make(chan packAndErr, config.ReadPackLoop)
+	go func() {
+		defer recover()
+		p := new(packAndErr)
+		for {
+			p.pack, p.err = queue.rw.ReadPack()
+			ch <- p
+			if p.err != nil {
+				break
+			}
+			p = new(packAndErr)
+		}
+	}()
+	return ch
+}
 func (queue *PackQueue) Close() error {
 	close(queue.writeChan)
 	close(queue.readChan)
