@@ -110,9 +110,9 @@ func login(rw *spp.Conn, typ int) (l listener, err error) {
 	//TODO: DB Check
 	switch req.Typ {
 	case CLIENT:
-		l = newClient(rw)
+		l = newClient(rw, req.Id)
 	case CSERVER:
-		l = newCServer(rw)
+		l = newCServer(rw, req.Id)
 	default:
 		fmt.Errorf("No such pack type :%v", pack.Typ)
 	}
@@ -165,18 +165,30 @@ type listener interface {
 type PackQueue struct {
 	// The last error in the tcp connection
 	writeError error
-	writeChan  chan *spp.Pack
+	// Notice read the error
+	errorChan chan error
+
+	writeChan chan *spp.Pack
+	readChan  chan *packAndErr
 	// Pack connection
 	rw *spp.Conn
+}
+type packAndErr struct {
+	pack *spp.Pack
+	err  error
 }
 
 func NewPackQueue(rw *spp.Conn) *PackQueue {
 	return &PackQueue{
 		rw:        rw,
 		writeChan: make(chan *spp.Pack, Conf.WirteLoopChanNum),
+		readChan:  make(chan *packAndErr, 1),
+		writeChan: make(chan error, 1),
 	}
 }
 func (queue *PackQueue) writeLoop() {
+	// defer recover()
+	var err error
 loop:
 	for {
 		select {
@@ -184,13 +196,17 @@ loop:
 			if pack == nil {
 				break loop
 			}
-			err := queue.rw.WritePack(pack)
+			err = queue.rw.WritePack(pack)
 			if err != nil {
 				// Tell listen error
 				queue.writeError = err
 				break loop
 			}
 		}
+	}
+	// Notice the read
+	if err != nil {
+		queue.errorChan <- err
 	}
 }
 
@@ -202,10 +218,26 @@ func (queue *PackQueue) WritePack(pack *spp.Pack) error {
 	queue.writeChan <- pack
 	return nil
 }
-func (queue *PackQueue) ReadPack() (*spp.Pack, error) {
-	return queue.rw.ReadPack()
+func (queue *PackQueue) ReadPack() (pack *spp.Pack, err error) {
+	go func() {
+		defer recover()
+		p := new(packAndErr)
+		p.pack, p.err = queue.rw.ReadPack()
+		queue.readChan <- p
+	}()
+	select {
+	case err := <-queue.errorChan:
+		// Hava an error
+		// pass
+	case pAndErr := <-queue.readChan:
+		pack = pAndErr.pack
+		err = pAndErr.err
+	}
+	return
 }
 func (queue *PackQueue) Close() error {
 	close(queue.writeChan)
+	close(queue.readChan)
+	close(queue.errorChan)
 	return nil
 }

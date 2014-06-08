@@ -19,8 +19,8 @@ const (
 )
 
 type loginRequst struct {
-	UserName string
-	Psw      string
+	Id  string
+	Psw string
 	// 1 is Control server , 0 is client
 	Typ int
 
