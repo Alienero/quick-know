@@ -4,18 +4,26 @@ import (
 	"labix.org/v2/mgo/bson"
 )
 
+const (
+	OFFLINE = 11
+	ONLINE  = 12
+)
+
 type Msg struct {
-	id   string
-	body []byte
+	Msg_id string // Msg ID
+	Body   []byte
+	Typ    int
+
+	Owner string // Owner
 }
 
-func GetOfflineMsg(id string, ch chan<- *Msg) {
+func GetOfflineMsg(mID string, ch chan<- *Msg) {
 	defer recover()
 	// Find in the db
 	sei := sei_msg.New()
 	defer sei.Refresh()
 	c := sei.DB(Config.MsgName).C(Config.OfflineName)
-	iter := c.Find(bson.M{"id": id}).Limit(Config.OfflineMsgs).Iter()
+	iter := c.Find(bson.M{"Msg_id": mID}).Limit(Config.OfflineMsgs).Iter()
 	defer iter.Close()
 	msg := new(Msg)
 	for iter.Next(msg) {
@@ -23,4 +31,4 @@ func GetOfflineMsg(id string, ch chan<- *Msg) {
 		msg = new(Msg)
 	}
 }
-func DelOfflineMsg(msg_id string) {}
+func DelOfflineMsg(msg_id string, id string) {}

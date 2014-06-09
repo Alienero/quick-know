@@ -13,6 +13,8 @@ type config struct {
 	WirteLoopChanNum int // Should > 1
 
 	ReadPackLoop int
+
+	MaxCacheMsg int
 }
 
 func InitConf() error {

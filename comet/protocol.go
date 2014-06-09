@@ -3,7 +3,7 @@ package comet
 import (
 	"encoding/json"
 
-	// "github.com/Alienero/spp"
+	"github.com/Alienero/quick-know/store"
 )
 
 // Socket protocol
@@ -11,7 +11,12 @@ const (
 	CLIENT  = 0
 	CSERVER = 1
 
-	PUSH_INFO  = 21
+	PUSH_INFO = 21
+	PUSH_MSG  = 22
+
+	// Client requst type
+	OFFLINE    = 11
+	ONLINE     = 12
 	HEART_BEAT = 31
 
 	LOGIN  = 101
@@ -53,6 +58,10 @@ type beat_heartResp struct {
 func getbeat_heartResp(status bool) ([]byte, error) {
 	resp := beat_heartResp{status}
 	return marshalJson(resp)
+}
+
+func getMsg(msg *store.Msg) ([]byte, error) {
+	return marshalJson(msg)
 }
 
 func marshalJson(v interface{}) ([]byte, error) {
