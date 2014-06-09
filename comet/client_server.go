@@ -31,10 +31,6 @@ func newClient(rw *spp.Conn, id string) *client {
 }
 
 func (c *client) listen_loop() (e error) {
-	defer func() {
-		// Close channels
-	}()
-
 	var (
 		err     error
 		msg     *store.Msg
@@ -107,7 +103,14 @@ loop:
 		}
 	}
 
-	return nil
+	// Free resources
+	// Close channels
+	// TODO : move the close method in the caller
+	close(c.offlines)
+	close(c.onlines)
+	close(readChan)
+
+	return
 }
 func (c *client) pushMsg(msg *store.Msg) (err error) {
 	var buf []byte
