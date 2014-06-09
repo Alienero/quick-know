@@ -3,13 +3,15 @@ package comet
 import (
 	"errors"
 	"fmt"
-	"time"
+	// "time"
 
 	"github.com/Alienero/quick-know/store"
 	"github.com/Alienero/spp"
 
-	// "github.com/golang/glog"
+	"github.com/golang/glog"
 )
+
+var notAlive = errors.New("Connection was dead")
 
 type client struct {
 	queue *PackQueue
@@ -21,18 +23,18 @@ type client struct {
 	onlineCache map[string]*store.Msg
 }
 
-var notAlive = errors.New("Connection was dead")
+func newClient(rw *spp.Conn, id string) *client {
+	return &client{
+		queue: NewPackQueue(rw),
+		id:    id,
+	}
+}
 
 func (c *client) listen_loop() (e error) {
 	defer func() {
 		// Close channels
 	}()
-	go c.queue.writeLoop()
-	// Push the offline msg
-	// TODO List :
-	// Get the offline msg
-	store.GetOfflineMsg(c.id, c.offlines)
-	// Start push
+
 	var (
 		err     error
 		msg     *store.Msg
@@ -41,6 +43,13 @@ func (c *client) listen_loop() (e error) {
 
 		readChan = c.queue.ReadPackInLoop()
 	)
+
+	// Start the write queue
+	go c.queue.writeLoop()
+
+	store.GetOfflineMsg(c.id, c.offlines)
+
+	// Start push
 loop:
 	for {
 		select {
@@ -72,14 +81,15 @@ loop:
 				err = pAndErr.err
 				break loop
 			}
+
 			// Choose the requst type
 			switch pAndErr.pack.Body[1] {
 			case OFFLINE:
 				// Del the offline msg in the store
-				store.DelOfflineMsg(string(packAndErr.pack.Body[1:]), c.id)
+				store.DelOfflineMsg(string(pAndErr.pack.Body[1:]), c.id)
 			case ONLINE:
 				// Del the online msg in the msg cache
-				delete(c.onlineCache, pAndErr.pack.Body[1:])
+				delete(c.onlineCache, string(pAndErr.pack.Body[1:]))
 			case HEART_BEAT:
 				// Reply the heart beat
 				pack, err = c.setPack(HEART_BEAT, []byte("OK"))
@@ -91,8 +101,8 @@ loop:
 					break loop
 				}
 			default:
-				err = fmt.Errorf("The type not define:%v", packAndErr.pack.Typ)
-				break loop
+				// Not define pack type
+				glog.Errorf("The type not define:%v\n", pAndErr.pack.Typ)
 			}
 		}
 	}
@@ -116,11 +126,4 @@ func (c *client) pushMsg(msg *store.Msg) (err error) {
 }
 func (c *client) setPack(typ int, body []byte) (*spp.Pack, error) {
 	return c.queue.rw.SetDefaultPack(typ, body)
-}
-
-func newClient(rw *spp.Conn, id string) *client {
-	return &client{
-		queue: NewPackQueue(rw),
-		id:    id,
-	}
 }

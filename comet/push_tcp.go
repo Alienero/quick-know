@@ -124,43 +124,6 @@ type listener interface {
 	listen_loop() error
 }
 
-// The Listen implement
-// type listen struct {
-// 	queue *PackQueue
-
-// 	// Handles
-// 	Handles map[int]handle
-// }
-
-// Need own
-// func (l *listen) listen_loop() (err error) {
-// 	defer func() {
-// 		// Close the res
-// 		close(l.WriteChan)
-// 	}()
-// 	var pack *spp.Pack
-// 	for {
-// 		// Listen
-// 		pack, err = l.Rw.ReadPack()
-// 		if err != nil {
-// 			// glog.Errorf("clientLoop read pack error:%v\n", err)
-// 			break
-// 		}
-// 		f := l.Handles[pack.Typ]
-// 		if f == nil {
-// 			err = fmt.Errorf("No such pack type:%v", pack.Typ)
-// 			break
-// 		}
-// 		// Call function f
-// 		err = f.serve(l, pack)
-// 		if err != nil {
-// 			// glog.Errorf("clientLoop() f.serve() error:%v\n", err)
-// 			break
-// 		}
-// 	}
-// 	return
-// }
-
 // Tcp write queue
 type PackQueue struct {
 	// The last error in the tcp connection
@@ -183,7 +146,7 @@ func NewPackQueue(rw *spp.Conn) *PackQueue {
 		rw:        rw,
 		writeChan: make(chan *spp.Pack, Conf.WirteLoopChanNum),
 		readChan:  make(chan *packAndErr, 1),
-		writeChan: make(chan error, 1),
+		errorChan: make(chan error, 1),
 	}
 }
 func (queue *PackQueue) writeLoop() {
@@ -226,7 +189,7 @@ func (queue *PackQueue) ReadPack() (pack *spp.Pack, err error) {
 		queue.readChan <- p
 	}()
 	select {
-	case err := <-queue.errorChan:
+	case err = <-queue.errorChan:
 		// Hava an error
 		// pass
 	case pAndErr := <-queue.readChan:
@@ -237,8 +200,8 @@ func (queue *PackQueue) ReadPack() (pack *spp.Pack, err error) {
 }
 
 // Only call once
-func (queue *PackQueue) ReadPackInLoop() <-chan packAndErr {
-	ch := make(chan packAndErr, config.ReadPackLoop)
+func (queue *PackQueue) ReadPackInLoop() <-chan *packAndErr {
+	ch := make(chan *packAndErr, Conf.ReadPackLoop)
 	go func() {
 		defer recover()
 		p := new(packAndErr)
