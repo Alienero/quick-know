@@ -17,33 +17,45 @@ type client struct {
 	queue *PackQueue
 	id    string // Owner+id
 
-	offlines chan *store.Msg
-	onlines  chan *store.Msg
+	offlines <-chan *store.Msg
+	onlines  <-chan *store.Msg
+	readChan <-chan *packAndErr
 
 	onlineCache map[string]*store.Msg
+
+	CloseChan   chan byte // Other gorountine Call notice exit
+	isSendClose bool
 }
 
 func newClient(rw *spp.Conn, id string) *client {
 	return &client{
-		queue: NewPackQueue(rw),
-		id:    id,
+		queue:     NewPackQueue(rw),
+		id:        id,
+		CloseChan: make(chan byte),
 	}
 }
 
 func (c *client) listen_loop() (e error) {
+	defer func() {
+		if c.isSendClose {
+			c.CloseChan <- 0
+		}
+		uesers.del(c.id)
+	}()
 	var (
 		err     error
 		msg     *store.Msg
 		pAndErr *packAndErr
 		pack    *spp.Pack
 
-		readChan = c.queue.ReadPackInLoop()
+		noticeFin = make(chan byte)
 	)
 
 	// Start the write queue
 	go c.queue.writeLoop()
 
-	store.GetOfflineMsg(c.id, c.offlines)
+	c.offlines = store.GetOfflineMsg(c.id, noticeFin)
+	c.readChan = c.queue.ReadPackInLoop(noticeFin)
 
 	// Start push
 loop:
@@ -52,6 +64,10 @@ loop:
 
 		case msg = <-c.offlines:
 			// Push the offline msg
+			if msg == nil {
+				glog.Errorln("offlines has been close")
+				break
+			}
 			err = c.pushMsg(msg)
 			if err != nil {
 				break loop
@@ -59,6 +75,10 @@ loop:
 		case msg = <-c.onlines:
 			// Push the online msg
 			// Add the msg into cache
+			if msg == nil {
+				glog.Errorln("onlines has been close")
+				break
+			}
 			if len(c.onlineCache) > Conf.MaxCacheMsg && Conf.MaxCacheMsg != 0 {
 				err = fmt.Errorf("Online msg is out of range:%v", len(c.onlineCache))
 				break loop
@@ -68,7 +88,7 @@ loop:
 			if err != nil {
 				break
 			}
-		case pAndErr = <-readChan:
+		case pAndErr = <-c.readChan:
 			// If connetion has a error, should break
 			// if it return a timeout error, illustrate
 			// hava not recive a heart beat pack at an
@@ -77,6 +97,9 @@ loop:
 				err = pAndErr.err
 				break loop
 			}
+		case <-c.CloseChan:
+			// Start close
+			break loop
 
 			// Choose the requst type
 			switch pAndErr.pack.Body[1] {
@@ -106,9 +129,12 @@ loop:
 	// Free resources
 	// Close channels
 	// TODO : move the close method in the caller
-	close(c.offlines)
-	close(c.onlines)
-	close(readChan)
+	for i := 0; i < 3; i++ {
+		noticeFin <- 1
+	}
+	// close(c.offlines) ok
+	// close(c.onlines) TODO
+	// close(readChan)   ok
 
 	return
 }

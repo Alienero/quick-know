@@ -18,19 +18,30 @@ type Msg struct {
 	Owner string // Owner
 }
 
-func GetOfflineMsg(mID string, ch chan<- *Msg) {
-	defer recover()
+func GetOfflineMsg(mID string, fin <-chan byte) <-chan *Msg {
+	// defer recover()
 	// Find in the db
-	sei := sei_msg.New()
-	defer sei.Refresh()
-	c := sei.DB(Config.MsgName).C(Config.OfflineName)
-	iter := c.Find(bson.M{"Msg_id": mID}).Limit(Config.OfflineMsgs).Iter()
-	defer iter.Close()
-	msg := new(Msg)
-	for iter.Next(msg) {
-		ch <- msg
-		msg = new(Msg)
-	}
+	ch := make(chan *Msg, Config.OfflineMsgs)
+	go func() {
+		sei := sei_msg.New()
+		defer sei.Refresh()
+		c := sei.DB(Config.MsgName).C(Config.OfflineName)
+		iter := c.Find(bson.M{"Msg_id": mID}).Limit(Config.OfflineMsgs).Iter()
+		defer iter.Close()
+		msg := new(Msg)
+	loop:
+		for iter.Next(msg) {
+			select {
+			case ch <- msg:
+				msg = new(Msg)
+			case <-fin:
+				break loop
+			}
+
+		}
+		close(ch)
+	}()
+	return ch
 }
 
 // Del the offile msg

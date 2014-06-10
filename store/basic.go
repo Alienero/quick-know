@@ -1,9 +1,8 @@
 package store
 
 import (
-	// "sync"
-
 	"labix.org/v2/mgo"
+	// "labix.org/v2/mgo/bson"
 )
 
 var sei_user *mgo.Session

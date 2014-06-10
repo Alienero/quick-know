@@ -27,7 +27,8 @@ type loginRequst struct {
 	Id  string
 	Psw string
 	// 1 is Control server , 0 is client
-	Typ int
+	Typ   int
+	Owner string
 
 	// Subscribe string
 }

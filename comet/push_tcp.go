@@ -6,6 +6,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/Alienero/quick-know/store"
 	"github.com/Alienero/spp"
 
 	"github.com/golang/glog"
@@ -107,12 +108,29 @@ func login(rw *spp.Conn, typ int) (l listener, err error) {
 	if req.Typ != typ {
 		return nil, fmt.Errorf("request type error:%v", req.Typ)
 	}
-	//TODO: DB Check
+
 	switch req.Typ {
 	case CLIENT:
-		l = newClient(rw, req.Id)
+		if !store.Client_login(req.Id, req.Psw, req.Owner) {
+			err = fmt.Errorf("Client Authentication is not passed id:%v,psw:%v,owner:%v", req.Id, req.Psw, req.Owner)
+			break
+		}
+		if tc := uesers.get(req.Id); tc != nil {
+			tc.CloseChan <- 1
+			<-tc.CloseChan
+		}
+		c := newClient(rw, req.Id)
+		uesers.set(req.Id, c)
+		l = c
 	case CSERVER:
-		l = newCServer(rw, req.Id)
+		if !store.Ctrl_login(req.Id, req.Psw) {
+			err = fmt.Errorf("Client Authentication is not passed id:%v,psw:%v", req.Id, req.Psw)
+			break
+		}
+		// TODO limit ctrl server users
+		cs := newCServer(rw, req.Id)
+		ctrls.set(req.Id, cs)
+		l = cs
 	default:
 		fmt.Errorf("No such pack type :%v", pack.Typ)
 	}
@@ -122,103 +140,4 @@ func login(rw *spp.Conn, typ int) (l listener, err error) {
 // Listen the clients' or controller server's request
 type listener interface {
 	listen_loop() error
-}
-
-// Tcp write queue
-type PackQueue struct {
-	// The last error in the tcp connection
-	writeError error
-	// Notice read the error
-	errorChan chan error
-
-	writeChan chan *spp.Pack
-	readChan  chan *packAndErr
-	// Pack connection
-	rw *spp.Conn
-}
-type packAndErr struct {
-	pack *spp.Pack
-	err  error
-}
-
-func NewPackQueue(rw *spp.Conn) *PackQueue {
-	return &PackQueue{
-		rw:        rw,
-		writeChan: make(chan *spp.Pack, Conf.WirteLoopChanNum),
-		readChan:  make(chan *packAndErr, 1),
-		errorChan: make(chan error, 1),
-	}
-}
-func (queue *PackQueue) writeLoop() {
-	// defer recover()
-	var err error
-loop:
-	for {
-		select {
-		case pack := <-queue.writeChan:
-			if pack == nil {
-				break loop
-			}
-			err = queue.rw.WritePack(pack)
-			if err != nil {
-				// Tell listen error
-				queue.writeError = err
-				break loop
-			}
-		}
-	}
-	// Notice the read
-	if err != nil {
-		queue.errorChan <- err
-	}
-}
-
-// Server write queue
-func (queue *PackQueue) WritePack(pack *spp.Pack) error {
-	if queue.writeError != nil {
-		return queue.writeError
-	}
-	queue.writeChan <- pack
-	return nil
-}
-func (queue *PackQueue) ReadPack() (pack *spp.Pack, err error) {
-	go func() {
-		defer recover()
-		p := new(packAndErr)
-		p.pack, p.err = queue.rw.ReadPack()
-		queue.readChan <- p
-	}()
-	select {
-	case err = <-queue.errorChan:
-		// Hava an error
-		// pass
-	case pAndErr := <-queue.readChan:
-		pack = pAndErr.pack
-		err = pAndErr.err
-	}
-	return
-}
-
-// Only call once
-func (queue *PackQueue) ReadPackInLoop() <-chan *packAndErr {
-	ch := make(chan *packAndErr, Conf.ReadPackLoop)
-	go func() {
-		defer recover()
-		p := new(packAndErr)
-		for {
-			p.pack, p.err = queue.rw.ReadPack()
-			ch <- p
-			if p.err != nil {
-				break
-			}
-			p = new(packAndErr)
-		}
-	}()
-	return ch
-}
-func (queue *PackQueue) Close() error {
-	close(queue.writeChan)
-	close(queue.readChan)
-	close(queue.errorChan)
-	return nil
 }

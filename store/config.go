@@ -5,6 +5,8 @@ var Config *config
 type config struct {
 	UserAddr string
 	UserName string
+	Clients  string
+	Ctrls    string
 
 	MsgAddr     string
 	MsgName     string
