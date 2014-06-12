@@ -1,6 +1,8 @@
 package store
 
 import (
+	// "time"
+
 	"github.com/golang/glog"
 	"labix.org/v2/mgo/bson"
 )
@@ -12,10 +14,12 @@ const (
 
 type Msg struct {
 	Msg_id string // Msg ID
+	Owner  string // Owner
+	ToID   string
 	Body   []byte
 	Typ    int
 
-	Owner string // Owner
+	Expired int64
 }
 
 func GetOfflineMsg(mID string, fin <-chan byte) <-chan *Msg {

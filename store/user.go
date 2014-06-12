@@ -11,8 +11,8 @@ type User struct {
 	owner string // Owner
 }
 type Ctrl struct {
-	id  string
-	psw string
+	id   string
+	auth string
 }
 
 func Client_login(id, psw, owner string) bool {
@@ -29,17 +29,18 @@ func Client_login(id, psw, owner string) bool {
 	}
 	return true
 }
-func Ctrl_login(id, psw string) bool {
+func Ctrl_login(auth string) (bool, string) {
 	sei := sei_user.New()
 	c := sei.DB(Config.UserName).C(Config.Ctrls)
 	var u *Ctrl
-	err := c.Find(bson.M{"id": id, "psw": psw}).One(u)
+	err := c.Find(bson.M{"auth": auth}).One(u)
 	if err != nil {
 		glog.Errorf("find ctrl error:%v", err)
-		return false
+		return false, ""
 	}
 	if u == nil {
-		return false
+		return false, ""
 	}
-	return true
+	return true, u.id
 }
+func Ctrl_login_alive(id, psw string) bool { return false }

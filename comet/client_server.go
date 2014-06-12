@@ -135,11 +135,11 @@ loop:
 
 	// Wrte the onlines msg to the db
 	for _, v := range c.onlineCache {
-		store.InsertOfflineMsg(msg)
+		store.InsertOfflineMsg(v)
 	}
 
 	// Close the online msg channel
-	uesers.del(c.id)
+	Users.Del(c.id)
 	c.lock.Lock()
 	c.isStop = true
 	c.lock.Unlock()
@@ -169,7 +169,12 @@ func (c *client) setPack(typ int, body []byte) (*spp.Pack, error) {
 	return c.queue.rw.SetDefaultPack(typ, body)
 }
 
-func (c *client) WriteOnlineMsg(msg *store.Msg) {
+func WriteOnlineMsg(id string, msg *store.Msg) {
+	c := Users.Get(id)
+	if c == nil {
+		store.InsertOfflineMsg(msg)
+		return
+	}
 	// defer c.lock.Unlock()
 	c.lock.Lock()
 	if c.isStop {

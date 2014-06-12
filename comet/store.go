@@ -5,7 +5,7 @@ import (
 )
 
 var (
-	uesers = &clientUs{
+	Users = &clientUs{
 		m: make(map[string]*client),
 		l: new(sync.RWMutex),
 	}
@@ -21,17 +21,17 @@ type clientUs struct {
 	l *sync.RWMutex
 }
 
-func (c *clientUs) get(id string) *client {
+func (c *clientUs) Get(id string) *client {
 	c.l.RLock()
 	defer c.l.RUnlock()
 	return c.m[id]
 }
-func (c *clientUs) set(id string, v *client) {
+func (c *clientUs) Set(id string, v *client) {
 	c.l.Lock()
 	c.m[id] = v
 	c.l.Unlock()
 }
-func (c *clientUs) del(id string) {
+func (c *clientUs) Del(id string) {
 	c.l.Lock()
 	delete(c.m, id)
 	c.l.Unlock()
@@ -42,17 +42,17 @@ type ctrlUs struct {
 	l *sync.RWMutex
 }
 
-func (c *ctrlUs) get(id string) *ControlServer {
+func (c *ctrlUs) Get(id string) *ControlServer {
 	c.l.RLock()
 	defer c.l.RUnlock()
 	return c.m[id]
 }
-func (c *ctrlUs) set(id string, v *ControlServer) {
+func (c *ctrlUs) Set(id string, v *ControlServer) {
 	c.l.Lock()
 	c.m[id] = v
 	c.l.Unlock()
 }
-func (c *ctrlUs) del(id string) {
+func (c *ctrlUs) Del(id string) {
 	c.l.Lock()
 	delete(c.m, id)
 	c.l.Unlock()

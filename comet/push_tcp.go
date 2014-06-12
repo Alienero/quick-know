@@ -116,21 +116,22 @@ func login(rw *spp.Conn, typ int) (l listener, err error) {
 			break
 		}
 		// Has been already logon
-		if tc := uesers.get(req.Id); tc != nil {
+		if tc := Users.Get(req.Id); tc != nil {
 			tc.CloseChan <- 1
 			<-tc.CloseChan
 		}
 		c := newClient(rw, req.Id)
-		uesers.set(req.Id, c)
+		Users.Set(req.Id, c)
 		l = c
 	case CSERVER:
-		if !store.Ctrl_login(req.Id, req.Psw) {
+		// TODO : Base64
+		if !store.Ctrl_login_alive(req.Id, req.Psw) {
 			err = fmt.Errorf("Client Authentication is not passed id:%v,psw:%v", req.Id, req.Psw)
 			break
 		}
 		// TODO limit ctrl server users
 		cs := newCServer(rw, req.Id)
-		ctrls.set(req.Id, cs)
+		ctrls.Set(req.Id, cs)
 		l = cs
 	default:
 		fmt.Errorf("No such pack type :%v", pack.Typ)
