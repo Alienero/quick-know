@@ -1,6 +1,8 @@
 package comet
 
 import (
+	"fmt"
+
 	"github.com/Alienero/spp"
 )
 
@@ -21,6 +23,7 @@ type packAndErr struct {
 	err  error
 }
 
+// Init a pack queue
 func NewPackQueue(rw *spp.Conn) *PackQueue {
 	return &PackQueue{
 		rw:        rw,
@@ -29,6 +32,9 @@ func NewPackQueue(rw *spp.Conn) *PackQueue {
 		errorChan: make(chan error, 1),
 	}
 }
+
+// Start a pack write queue
+// It should run in a new grountine
 func (queue *PackQueue) writeLoop() {
 	// defer recover()
 	var err error
@@ -53,7 +59,7 @@ loop:
 	}
 }
 
-// Server write queue
+// Write a pack , and get the last error
 func (queue *PackQueue) WritePack(pack *spp.Pack) error {
 	if queue.writeError != nil {
 		return queue.writeError
@@ -61,6 +67,8 @@ func (queue *PackQueue) WritePack(pack *spp.Pack) error {
 	queue.writeChan <- pack
 	return nil
 }
+
+// Read a pack and retuen the write queue error
 func (queue *PackQueue) ReadPack() (pack *spp.Pack, err error) {
 	go func() {
 		p := new(packAndErr)
@@ -78,6 +86,7 @@ func (queue *PackQueue) ReadPack() (pack *spp.Pack, err error) {
 	return
 }
 
+// Get a read pack queue
 // Only call once
 func (queue *PackQueue) ReadPackInLoop(fin <-chan byte) <-chan *packAndErr {
 	ch := make(chan *packAndErr, Conf.ReadPackLoop)
@@ -101,9 +110,42 @@ func (queue *PackQueue) ReadPackInLoop(fin <-chan byte) <-chan *packAndErr {
 	}()
 	return ch
 }
+
+// Close the all of queue's channels
 func (queue *PackQueue) Close() error {
 	close(queue.writeChan)
 	close(queue.readChan)
 	close(queue.errorChan)
 	return nil
+}
+
+// Buffer
+type buffer struct {
+	index int
+	data  []byte
+}
+
+func newBuffer(data []byte) *buffer {
+	return &buffer{
+		data:  data,
+		index: 0,
+	}
+}
+func (b *buffer) readString(length int) (s string, err error) {
+	if (length + b.index) > len(b.data) {
+		err = fmt.Errorf("Out of range error:%v", length)
+		return
+	}
+	s = string(b.data[b.index:(length + b.index)])
+	b.index += length
+	return
+}
+func (b *buffer) readByte() (c byte, err error) {
+	if (1 + b.index) > len(b.data) {
+		err = fmt.Errorf("Out of range error")
+		return
+	}
+	c = b.data[b.index]
+	b.index++
+	return
 }

@@ -3,7 +3,7 @@ package comet
 import (
 	"errors"
 	"fmt"
-	// "time"
+	"sync"
 
 	"github.com/Alienero/quick-know/store"
 	"github.com/Alienero/spp"
@@ -18,13 +18,16 @@ type client struct {
 	id    string // Owner+id
 
 	offlines <-chan *store.Msg
-	onlines  <-chan *store.Msg
+	onlines  chan *store.Msg
 	readChan <-chan *packAndErr
 
 	onlineCache map[string]*store.Msg
 
 	CloseChan   chan byte // Other gorountine Call notice exit
 	isSendClose bool
+
+	isStop bool
+	lock   *sync.Mutex
 }
 
 func newClient(rw *spp.Conn, id string) *client {
@@ -32,16 +35,13 @@ func newClient(rw *spp.Conn, id string) *client {
 		queue:     NewPackQueue(rw),
 		id:        id,
 		CloseChan: make(chan byte),
+		lock:      new(sync.Mutex),
 	}
 }
 
+// Push the msg and response the heart beat
 func (c *client) listen_loop() (e error) {
-	defer func() {
-		if c.isSendClose {
-			c.CloseChan <- 0
-		}
-		uesers.del(c.id)
-	}()
+
 	var (
 		err     error
 		msg     *store.Msg
@@ -126,15 +126,27 @@ loop:
 		}
 	}
 
+	// Wrte the onlines msg to the db
 	// Free resources
 	// Close channels
-	// TODO : move the close method in the caller
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 2; i++ {
 		noticeFin <- 1
 	}
-	// close(c.offlines) ok
-	// close(c.onlines) TODO
-	// close(readChan)   ok
+
+	// Wrte the onlines msg to the db
+	for _, v := range c.onlineCache {
+		store.InsertOfflineMsg(msg)
+	}
+
+	// Close the online msg channel
+	uesers.del(c.id)
+	c.lock.Lock()
+	c.isStop = true
+	c.lock.Unlock()
+	close(c.onlines)
+	if c.isSendClose {
+		c.CloseChan <- 0
+	}
 
 	return
 }
@@ -155,4 +167,16 @@ func (c *client) pushMsg(msg *store.Msg) (err error) {
 }
 func (c *client) setPack(typ int, body []byte) (*spp.Pack, error) {
 	return c.queue.rw.SetDefaultPack(typ, body)
+}
+
+func (c *client) WriteOnlineMsg(msg *store.Msg) {
+	// defer c.lock.Unlock()
+	c.lock.Lock()
+	if c.isStop {
+		c.lock.Unlock()
+		store.InsertOfflineMsg(msg)
+	} else {
+		c.lock.Unlock()
+		c.onlines <- msg
+	}
 }

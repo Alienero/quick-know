@@ -53,3 +53,13 @@ func DelOfflineMsg(msg_id string, id string) {
 		glog.Errorf("Remove a offline msg(id:%v,Owner:%v) error:%v", msg_id, id, err)
 	}
 }
+
+// Intert a new offilne msg
+func InsertOfflineMsg(msg *Msg) {
+	c := sei_msg.DB(Config.MsgName).C(Config.OfflineName)
+	defer sei_msg.Refresh()
+	err := c.Insert(msg)
+	if err != nil {
+		glog.Errorf("Intert a offline msg(id:%v) error:%v", msg.Msg_id)
+	}
+}

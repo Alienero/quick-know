@@ -115,6 +115,7 @@ func login(rw *spp.Conn, typ int) (l listener, err error) {
 			err = fmt.Errorf("Client Authentication is not passed id:%v,psw:%v,owner:%v", req.Id, req.Psw, req.Owner)
 			break
 		}
+		// Has been already logon
 		if tc := uesers.get(req.Id); tc != nil {
 			tc.CloseChan <- 1
 			<-tc.CloseChan

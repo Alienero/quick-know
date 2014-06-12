@@ -1,6 +1,7 @@
 package comet
 
 import (
+	// "bytes"
 	"encoding/json"
 
 	"github.com/Alienero/quick-know/store"
@@ -35,7 +36,28 @@ type loginRequst struct {
 
 func getLoginRequst(data []byte) (l *loginRequst, err error) {
 	l = new(loginRequst)
-	err = unMarshalJson(data, l)
+	buf := newBuffer(data)
+	idLen, err := buf.readByte()
+	if err != nil {
+		return
+	}
+	l.Id, err = buf.readString(int(idLen))
+	if err != nil {
+		return
+	}
+	pswLen, err := buf.readByte()
+	if err != nil {
+		return
+	}
+	l.Psw, err = buf.readString(int(pswLen))
+	if err != nil {
+		return
+	}
+	owLen, err := buf.readByte()
+	if err != nil {
+		return
+	}
+	l.Owner, err = buf.readString(int(owLen))
 	return
 }
 

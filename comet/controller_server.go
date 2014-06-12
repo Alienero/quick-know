@@ -59,3 +59,5 @@ func (cs *ControlServer) listen_loop() (err error) {
 	}
 	return
 }
+
+func Init() error { return nil }
