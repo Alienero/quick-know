@@ -1,12 +1,10 @@
 package web
 
-// The pack use default mux
 import (
 	"encoding/json"
 	"io"
 	"io/ioutil"
 	"net/http"
-	"strings"
 
 	"github.com/Alienero/quick-know/comet"
 	"github.com/Alienero/quick-know/store"
@@ -14,54 +12,83 @@ import (
 	"github.com/golang/glog"
 )
 
-func Init() error {
-	// Init handle into mux
+// Push a private msg
+type private_msg struct {
+	handle
 }
 
-type handle struct {
-	ID      string
-	isBreak bool
-}
-
-func (h *handle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	h.prepare(w, r)
-	if h.isBreak {
-		http.Error(w, "", http.StatusForbidden)
-		return
-	}
-	switch r.Method {
-	case "POST":
-		h.Post(w, r)
-	default:
-		http.Error(w, "", http.StatusMethodNotAllowed)
-	}
-}
-func (h *handle) prepare(w http.ResponseWriter, r *http.Request) {
-	// Check the use name and password
-	temp := r.Header.Get("Authorization")
-	if len(temp) < 7 {
-		h.isBreak = true
-		return
-	}
-	auth := temp[7:]
-	if b, id := store.Ctrl_login(auth); !b {
-		h.isBreak = true
-	} else {
-		h.ID = id
-	}
-}
-func (h *handle) Post(w http.ResponseWriter, r *http.Request) {
-	data, err := ioutil.ReadAll(r)
+func (m *private_msg) Post(w http.ResponseWriter, r *http.Request) {
+	data, err := ioutil.ReadAll(r.Body)
 	if err != io.EOF {
 		glog.Errorf("Read body error:%v\n", err)
 		return
 	}
 	msg := new(store.Msg)
-	msg.Owner = h.id
+	msg.Owner = m.ID
 	err = json.Unmarshal(data, msg)
 	if err != nil {
 		glog.Errorf("Unmarshal json error%v\n", err)
 		return
 	}
-	comet.WriteOnlineMsg(h.ID, msg)
+	msg.Msg_id = get_uuid()
+	comet.WriteOnlineMsg(m.ID, msg)
+	io.WriteString(w, `{msg_id":"`)
+	io.WriteString(w, msg.Msg_id)
+	io.WriteString(w, `"}`)
+}
+
+// Add a new user
+type add_user struct {
+}
+
+func (this *add_user) Post(w http.ResponseWriter, r *http.Request) {
+
+}
+
+// Delete a user
+type del_user struct {
+}
+
+func (this *del_user) Post(w http.ResponseWriter, r *http.Request) {
+
+}
+
+// Add sub msg
+type add_sub struct {
+}
+
+func (this *add_sub) Post(w http.ResponseWriter, r *http.Request) {
+
+}
+
+// Del sub msg
+type del_sub struct {
+}
+
+func (this *del_sub) Post(w http.ResponseWriter, r *http.Request) {
+
+}
+
+// Add use into msg
+type sub_msg struct {
+}
+
+func (this *sub_msg) Post(w http.ResponseWriter, r *http.Request) {
+
+}
+
+// Remove ues from the msg
+type rm_msg_sub struct {
+}
+
+func (this *rm_msg_sub) Post(w http.ResponseWriter, r *http.Request) {
+
+}
+
+// Send msg to all
+type broadcast struct {
+}
+
+func (this *broadcast) Post(w http.ResponseWriter, r *http.Request) {
+
 }
