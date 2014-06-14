@@ -169,8 +169,8 @@ func (c *client) setPack(typ int, body []byte) (*spp.Pack, error) {
 	return c.queue.rw.SetDefaultPack(typ, body)
 }
 
-func WriteOnlineMsg(id string, msg *store.Msg) {
-	c := Users.Get(id)
+func WriteOnlineMsg(msg *store.Msg) {
+	c := Users.Get(msg.ToID)
 	if c == nil {
 		store.InsertOfflineMsg(msg)
 		return

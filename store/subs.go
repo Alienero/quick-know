@@ -53,7 +53,7 @@ func AddUserToSub(sm *Sub_map, id string) error {
 	sei := sei_msg.New()
 	defer sei.Refresh()
 	sub := new(Sub)
-	if IsSubExist(sm.Sub_id, id) && isUserExist(sm.User_id, id) {
+	if IsSubExist(sm.Sub_id, id) && IsUserExist(sm.User_id, id) {
 		if err := sei.DB(Config.MsgName).C(Config.SubsName).Insert(sm); err != nil {
 			glog.Errorf("Insert a new sub's user error:%v\n", err)
 		}
@@ -64,7 +64,7 @@ func AddUserToSub(sm *Sub_map, id string) error {
 }
 
 func DelUserFromSub(sub_id, uid, id string) error {
-	if isUserExist(uid, id) && IsSubExist(sub_id, id) {
+	if IsUserExist(uid, id) && IsSubExist(sub_id, id) {
 		sei := sei_msg.New()
 		defer sei.Refresh()
 		err := sei.DB(Config.MsgName).C(Config.SubsName).Remove(bson.M{"sub_id": sub_id, "user_id": uid})
@@ -83,4 +83,22 @@ func IsSubExist(sub_id, id string) bool {
 	defer it.Close()
 	sub := new(Sub)
 	return it.Next(sub)
+}
+
+func ChanSubUsers(sub_id string) <-chan string {
+	ch := make(chan string, 100)
+
+	go func() {
+		sei := sei_msg.New()
+		it := sei.DB(Config.MsgName).C(Config.SubsName).Find(bson.M{"sub_id": sub_id}).Iter()
+		sm := new(Sub_map)
+		for it.Next(sm) {
+			ch <- sm.User_id
+		}
+		close(ch)
+		it.Close()
+		sei.Refresh()
+	}()
+
+	return ch
 }

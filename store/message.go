@@ -22,7 +22,7 @@ type Msg struct {
 	Expired int64
 }
 
-func GetOfflineMsg(mID string, fin <-chan byte) <-chan *Msg {
+func GetOfflineMsg(id string, fin <-chan byte) <-chan *Msg {
 	// defer recover()
 	// Find in the db
 	ch := make(chan *Msg, Config.OfflineMsgs)
@@ -30,7 +30,7 @@ func GetOfflineMsg(mID string, fin <-chan byte) <-chan *Msg {
 		sei := sei_msg.New()
 		defer sei.Refresh()
 		c := sei.DB(Config.MsgName).C(Config.OfflineName)
-		iter := c.Find(bson.M{"msg_id": mID}).Limit(Config.OfflineMsgs).Iter()
+		iter := c.Find(bson.M{"owner": id}).Limit(Config.OfflineMsgs).Iter()
 		defer iter.Close()
 		msg := new(Msg)
 	loop:

@@ -62,11 +62,28 @@ func DelUser(id string, own string) {
 	}
 }
 
-func isUserExist(uid, oid string) bool {
+func IsUserExist(uid, oid string) bool {
 	sei := sei_user.New()
 	defer sei.Refresh()
 	u := new(User)
 	it := sei.DB(Config.UserName).C(Config.Clients).Find(bson.M{"id": uid, "owner": oid}).Iter()
 	defer it.Close()
 	return it.Next(u)
+}
+
+func ChanUserID(own string) <-chan string {
+	ch := make(chan string, 100)
+	go func() {
+		sei := sei_user.New()
+		it := sei.DB(Config.UserName).C(Config.Clients).Find(bson.M{"owner": own}).Iter()
+		u := new(User)
+		for it.Next(u) {
+			ch <- u.Id
+		}
+		it.Close()
+		sei.Refresh()
+		close(ch)
+	}()
+
+	return ch
 }
