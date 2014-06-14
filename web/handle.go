@@ -99,7 +99,7 @@ func (this *del_sub) Post(w http.ResponseWriter, r *http.Request) {
 		glog.Errorf("Get a new sub error%v\n", err)
 		return
 	}
-	store.DelSub(sub.Id)
+	store.DelSub(sub.Id, this.ID)
 	// Write the response
 	io.WriteString(w, `{sub_id":"`)
 	io.WriteString(w, sub.Id)
