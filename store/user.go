@@ -19,13 +19,10 @@ func Client_login(id, psw, owner string) bool {
 	sei := sei_user.New()
 	defer sei.Refresh()
 	c := sei.DB(Config.UserName).C(Config.Clients)
-	var u *User
-	err := c.Find(bson.M{"ID": id, "Psw": psw, "Owner": owner}).One(u)
-	if err != nil {
-		glog.Errorf("find user error:%v", err)
-		return false
-	}
-	if u == nil {
+	var u = new(User)
+	it := c.Find(bson.M{"id": id, "psw": psw, "owner": owner}).Iter()
+	defer it.Close()
+	if !it.Next(u) {
 		return false
 	}
 	return true
@@ -34,16 +31,14 @@ func Ctrl_login(auth string) (bool, string) {
 	sei := sei_user.New()
 	defer sei.Refresh()
 	c := sei.DB(Config.UserName).C(Config.Ctrls)
-	var u *Ctrl
-	err := c.Find(bson.M{"auth": auth}).One(u)
-	if err != nil {
-		glog.Errorf("find ctrl error:%v", err)
+	var u = new(Ctrl)
+	it := c.Find(bson.M{"auth": auth}).Iter()
+	defer it.Close()
+	if !it.Next(u) {
 		return false, ""
 	}
-	if u == nil {
-		return false, ""
-	}
-	return true, u.id
+
+	return true, u.Id
 }
 func Ctrl_login_alive(id, psw string) bool { return false }
 
@@ -61,8 +56,17 @@ func DelUser(id string, own string) {
 	sei := sei_user.New()
 	defer sei.Refresh()
 	c := sei.DB(Config.UserName).C(Config.Clients)
-	err := c.Remove(bson.M{"ID": id, "Owner": own})
+	err := c.Remove(bson.M{"id": id, "owner": own})
 	if err != nil {
 		glog.Errorf("Del a user error:%v,ID:%v,Own:%v", err, id, own)
 	}
+}
+
+func isUserExist(uid, oid string) bool {
+	sei := sei_user.New()
+	defer sei.Refresh()
+	u := new(User)
+	it := sei.DB(Config.UserName).C(Config.Clients).Find(bson.M{"id": uid, "owner": oid}).Iter()
+	defer it.Close()
+	return it.Next(u)
 }

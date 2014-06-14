@@ -30,7 +30,7 @@ func GetOfflineMsg(mID string, fin <-chan byte) <-chan *Msg {
 		sei := sei_msg.New()
 		defer sei.Refresh()
 		c := sei.DB(Config.MsgName).C(Config.OfflineName)
-		iter := c.Find(bson.M{"Msg_id": mID}).Limit(Config.OfflineMsgs).Iter()
+		iter := c.Find(bson.M{"msg_id": mID}).Limit(Config.OfflineMsgs).Iter()
 		defer iter.Close()
 		msg := new(Msg)
 	loop:
@@ -52,7 +52,7 @@ func GetOfflineMsg(mID string, fin <-chan byte) <-chan *Msg {
 func DelOfflineMsg(msg_id string, id string) {
 	c := sei_msg.DB(Config.MsgName).C(Config.OfflineName)
 	defer sei_msg.Refresh()
-	err := c.Remove(bson.M{"Msg_id": msg_id, "Owner": id})
+	err := c.Remove(bson.M{"msg_id": msg_id, "owner": id})
 	if err != nil {
 		glog.Errorf("Remove a offline msg(id:%v,Owner:%v) error:%v", msg_id, id, err)
 	}

@@ -12,5 +12,8 @@ type config struct {
 	MsgName     string
 	OfflineName string
 
+	SubName  string
+	SubsName string
+
 	OfflineMsgs int
 }
