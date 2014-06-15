@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package web
+package comet
 
-var Conf *config
-
-type config struct {
-	Listen_addr string
+func main() {
+	// TODO
+	// Init the conf
+	// Open the cliens's server
 }
