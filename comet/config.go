@@ -12,13 +12,16 @@ import (
 var Conf = &config{}
 
 type config struct {
-	Listen_addr string
+	Listen_addr string // Client listener addr
 
 	WirteLoopChanNum int // Should > 1
 
 	ReadPackLoop int
 
 	MaxCacheMsg int
+
+	ReadTimeout  int // Heart beat check (seconds)
+	WriteTimeout int
 }
 
 func InitConf() error {

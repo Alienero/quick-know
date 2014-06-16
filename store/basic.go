@@ -13,6 +13,10 @@ var sei_user *mgo.Session
 var sei_msg *mgo.Session
 
 func Init() (err error) {
+	err = initConfig()
+	if err != nil {
+		return
+	}
 	err = connect(sei_user, Config.UserAddr)
 	if err != nil {
 		return
