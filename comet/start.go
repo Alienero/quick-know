@@ -5,11 +5,13 @@
 package comet
 
 import (
+	"flag"
+
 	"github.com/Alienero/quick-know/store"
 )
 
 func Start() {
-
+	flag.Parse()
 	// Init the DB conf
 	if err := store.Init(); err != nil {
 		panic(err)

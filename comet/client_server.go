@@ -53,6 +53,8 @@ func (c *client) listen_loop() (e error) {
 		pack    *spp.Pack
 
 		noticeFin = make(chan byte)
+
+		isOfflineClose bool // Is offline chan has been close
 	)
 
 	// Start the write queue
@@ -69,6 +71,9 @@ loop:
 		case msg = <-c.offlines:
 			// Push the offline msg
 			if msg == nil {
+				isOfflineClose = true
+				// Close the offline chan
+				noticeFin <- 1
 				glog.Errorln("offlines has been close")
 				break
 			}
@@ -101,9 +106,6 @@ loop:
 				err = pAndErr.err
 				break loop
 			}
-		case <-c.CloseChan:
-			// Start close
-			break loop
 
 			// Choose the requst type
 			switch pAndErr.pack.Body[1] {
@@ -127,14 +129,22 @@ loop:
 				// Not define pack type
 				glog.Errorf("The type not define:%v\n", pAndErr.pack.Typ)
 			}
+		case <-c.CloseChan:
+			// Start close
+			break loop
+
 		}
 	}
 
 	// Wrte the onlines msg to the db
 	// Free resources
 	// Close channels
-	for i := 0; i < 2; i++ {
+	if isOfflineClose {
 		noticeFin <- 1
+	} else {
+		for i := 0; i < 2; i++ {
+			noticeFin <- 1
+		}
 	}
 
 	// Wrte the onlines msg to the db
@@ -174,7 +184,7 @@ func (c *client) setPack(typ int, body []byte) (*spp.Pack, error) {
 }
 
 func WriteOnlineMsg(msg *store.Msg) {
-	c := Users.Get(msg.ToID)
+	c := Users.Get(msg.To_id)
 	if c == nil {
 		store.InsertOfflineMsg(msg)
 		return

@@ -5,8 +5,11 @@
 package store
 
 import (
+	"bufio"
+	"bytes"
 	"encoding/json"
-	"io/ioutil"
+	"os"
+	"strings"
 )
 
 var Config = new(config)
@@ -28,9 +31,25 @@ type config struct {
 }
 
 func initConfig() error {
-	data, err := ioutil.ReadFile("store.conf")
+	buf := new(bytes.Buffer)
+
+	f, err := os.Open("store.conf")
 	if err != nil {
 		return err
 	}
-	return json.Unmarshal(data, config)
+	defer f.Close()
+	r := bufio.NewReader(f)
+	for {
+		line, err := r.ReadSlice('\n')
+		if err != nil {
+			if len(line) > 0 {
+				buf.Write(line)
+			}
+			break
+		}
+		if !strings.HasPrefix(strings.TrimLeft(string(line), "\t "), "//") {
+			buf.Write(line)
+		}
+	}
+	return json.Unmarshal(buf.Bytes(), Config)
 }

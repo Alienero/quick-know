@@ -19,13 +19,16 @@ const (
 type Msg struct {
 	Msg_id string // Msg ID
 	Owner  string // Owner
-	ToID   string
+	To_id  string
 	Body   []byte
 	Typ    int
 
 	Expired int64
 }
 
+// BUG[#1]: if channel has been clsoe , but client server has benn not recive the nil msg
+// it will send the fin(1) to the channel and wait. The stack has been not exist, so it will
+// become a dead lock.
 func GetOfflineMsg(id string, fin <-chan byte) <-chan *Msg {
 	// defer recover()
 	// Find in the db
@@ -34,18 +37,24 @@ func GetOfflineMsg(id string, fin <-chan byte) <-chan *Msg {
 		sei := sei_msg.New()
 		defer sei.Refresh()
 		c := sei.DB(Config.MsgName).C(Config.OfflineName)
-		iter := c.Find(bson.M{"owner": id}).Limit(Config.OfflineMsgs).Iter()
+		iter := c.Find(bson.M{"to_id": id}).Limit(Config.OfflineMsgs).Iter()
 		defer iter.Close()
 		msg := new(Msg)
+		flag := false
 	loop:
 		for iter.Next(msg) {
 			select {
 			case ch <- msg:
 				msg = new(Msg)
 			case <-fin:
+				flag = true
 				break loop
 			}
 
+		}
+		if !flag {
+			// not recive the fin. wait the fin
+			<-fin
 		}
 		close(ch)
 	}()
@@ -56,13 +65,14 @@ func GetOfflineMsg(id string, fin <-chan byte) <-chan *Msg {
 func DelOfflineMsg(msg_id string, id string) {
 	c := sei_msg.DB(Config.MsgName).C(Config.OfflineName)
 	defer sei_msg.Refresh()
-	err := c.Remove(bson.M{"msg_id": msg_id, "owner": id})
+	err := c.Remove(bson.M{"msg_id": msg_id, "to_id": id})
 	if err != nil {
-		glog.Errorf("Remove a offline msg(id:%v,Owner:%v) error:%v", msg_id, id, err)
+		glog.Errorf("Remove a offline msg(id:%v,to_id:%v) error:%v", msg_id, id, err)
 	}
 }
 
 // Intert a new offilne msg
+// Before should check the to_id belong the user
 func InsertOfflineMsg(msg *Msg) {
 	c := sei_msg.DB(Config.MsgName).C(Config.OfflineName)
 	defer sei_msg.Refresh()
