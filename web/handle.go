@@ -19,15 +19,15 @@ type private_msg struct {
 	handle
 }
 
-func (this *private_msg) Post(w http.ResponseWriter, r *http.Request) {
+func (this *private_msg) Post(w http.ResponseWriter, r *http.Request, u *user) {
 	msg := new(store.Msg)
 	err := readAdnGet(r.Body, msg)
 	if err != nil {
 		glog.Errorf("push private msg error%v\n", err)
 		return
 	}
-	if store.IsUserExist(msg.To_id, this.ID) {
-		msg.Owner = this.ID
+	if store.IsUserExist(msg.To_id, u.ID) {
+		msg.Owner = u.ID
 		msg.Msg_id = get_uuid()
 		comet.WriteOnlineMsg(msg)
 		io.WriteString(w, `{msg_id":"`)
@@ -45,7 +45,7 @@ type add_user struct {
 	handle
 }
 
-func (this *add_user) Post(w http.ResponseWriter, r *http.Request) {
+func (this *add_user) Post(w http.ResponseWriter, r *http.Request, uu *user) {
 	u := new(store.User)
 	err := readAdnGet(r.Body, u)
 	if err != nil {
@@ -64,14 +64,14 @@ type del_user struct {
 	handle
 }
 
-func (this *del_user) Post(w http.ResponseWriter, r *http.Request) {
+func (this *del_user) Post(w http.ResponseWriter, r *http.Request, uu *user) {
 	u := new(store.User)
 	err := readAdnGet(r.Body, u)
 	if err != nil {
 		glog.Errorf("add user error%v\n", err)
 		return
 	}
-	if err := store.DelUser(u.Id, this.ID); err != nil {
+	if err := store.DelUser(u.Id, uu.ID); err != nil {
 		glog.Errorf("Del user in the web error:%v", err)
 		io.WriteString(w, `{id":"`)
 		io.WriteString(w, u.Id)
@@ -81,12 +81,12 @@ func (this *del_user) Post(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Add sub msg
+// Add sub group
 type add_sub struct {
 	handle
 }
 
-func (this *add_sub) Post(w http.ResponseWriter, r *http.Request) {
+func (this *add_sub) Post(w http.ResponseWriter, r *http.Request, uu *user) {
 	sub := new(store.Sub)
 	err := readAdnGet(r.Body, sub)
 	if err != nil {
@@ -106,7 +106,7 @@ type del_sub struct {
 	handle
 }
 
-func (this *del_sub) Post(w http.ResponseWriter, r *http.Request) {
+func (this *del_sub) Post(w http.ResponseWriter, r *http.Request, uu *user) {
 	sub := new(store.Sub)
 	err := readAdnGet(r.Body, sub)
 	if err != nil {
@@ -114,7 +114,7 @@ func (this *del_sub) Post(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := store.DelSub(sub.Id, this.ID); err != nil {
+	if err := store.DelSub(sub.Id, uu.ID); err != nil {
 		// Write the response
 		glog.Errorf("Del sub in the web error:%v", err)
 		io.WriteString(w, `{sub_id":"`)
@@ -126,19 +126,19 @@ func (this *del_sub) Post(w http.ResponseWriter, r *http.Request) {
 }
 
 // Add use into msg's sub group
-type sub_msg struct {
+type user_sub struct {
 	handle
 }
 
-func (this *sub_msg) Post(w http.ResponseWriter, r *http.Request) {
+func (this *user_sub) Post(w http.ResponseWriter, r *http.Request, uu *user) {
 	sm := new(store.Sub_map)
 	err := readAdnGet(r.Body, sm)
 	if err != nil {
-		glog.Errorf("Get the add user(%v) of id(%v) to sub(%v) error:%v\n", sm.User_id, this.ID, sm.Sub_id, err)
+		glog.Errorf("Get the add user(%v) of id(%v) to sub(%v) error:%v\n", sm.User_id, uu.ID, sm.Sub_id, err)
 		return
 	}
 	// Write the response
-	if err = store.AddUserToSub(sm, this.ID); err != nil {
+	if err = store.AddUserToSub(sm, uu.ID); err != nil {
 		glog.Errorf("Store the sub_map error:", err)
 		io.WriteString(w, `{Status":"Fail"}`)
 	} else {
@@ -147,18 +147,18 @@ func (this *sub_msg) Post(w http.ResponseWriter, r *http.Request) {
 }
 
 // Remove user from the sub group
-type rm_msg_sub struct {
+type rm_user_sub struct {
 	handle
 }
 
-func (this *rm_msg_sub) Post(w http.ResponseWriter, r *http.Request) {
+func (this *rm_user_sub) Post(w http.ResponseWriter, r *http.Request, uu *user) {
 	sm := new(store.Sub_map)
 	err := readAdnGet(r.Body, sm)
 	if err != nil {
-		glog.Errorf("Get the remove user(%v) of id(%v) to sub(%v) error:%v\n", sm.User_id, this.ID, sm.Sub_id, err)
+		glog.Errorf("Get the remove user(%v) of id(%v) to sub(%v) error:%v\n", sm.User_id, uu.ID, sm.Sub_id, err)
 		return
 	}
-	if err = store.DelUserFromSub(sm.Sub_id, sm.User_id, this.ID); err != nil {
+	if err = store.DelUserFromSub(sm.Sub_id, sm.User_id, uu.ID); err != nil {
 		glog.Errorf("Del the user o error:%v\n", err)
 		io.WriteString(w, `{Status":"Fail"}`)
 	} else {
@@ -171,18 +171,18 @@ type broadcast struct {
 	handle
 }
 
-func (this *broadcast) Post(w http.ResponseWriter, r *http.Request) {
+func (this *broadcast) Post(w http.ResponseWriter, r *http.Request, uu *user) {
 	msg := new(store.Msg)
 	err := readAdnGet(r.Body, msg)
 	if err != nil {
 		glog.Errorf("push private msg error%v\n", err)
 		return
 	}
-	if store.IsUserExist(msg.To_id, this.ID) && msg.To_id == "" {
-		msg.Owner = this.ID
+	if store.IsUserExist(msg.To_id, uu.ID) && msg.To_id == "" {
+		msg.Owner = uu.ID
 		msg.Msg_id = get_uuid()
 
-		ch := store.ChanUserID(this.ID)
+		ch := store.ChanUserID(uu.ID)
 		go func() {
 			for {
 				s, ok := <-ch
@@ -208,7 +208,7 @@ type group_msg struct {
 	handle
 }
 
-func (this *group_msg) Post(w http.ResponseWriter, r *http.Request) {
+func (this *group_msg) Post(w http.ResponseWriter, r *http.Request, uu *user) {
 	type multi_cast struct {
 		Sub_id string
 		Msg    *store.Msg
@@ -220,7 +220,7 @@ func (this *group_msg) Post(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Check the sub group belong to the user
-	if store.IsSubExist(mc.Sub_id, this.ID) {
+	if store.IsSubExist(mc.Sub_id, uu.ID) {
 		mc.Msg.Msg_id = get_uuid()
 		// Submit msg
 		go func() {

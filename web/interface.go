@@ -16,37 +16,41 @@ func Init() error {
 	return nil
 }
 
-type handle struct {
+type user struct {
 	ID      string
 	isBreak bool
 }
 
+type handle struct {
+}
+
 func (h *handle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	h.prepare(w, r)
-	if h.isBreak {
+	u := new(user)
+	h.prepare(w, r, u)
+	if u.isBreak {
 		http.Error(w, "", http.StatusForbidden)
 		return
 	}
 	switch r.Method {
 	case "POST":
-		h.Post(w, r)
+		h.Post(w, r, u)
 	default:
 		http.Error(w, "", http.StatusMethodNotAllowed)
 	}
 }
-func (h *handle) prepare(w http.ResponseWriter, r *http.Request) {
+func (h *handle) prepare(w http.ResponseWriter, r *http.Request, u *user) {
 	// Check the use name and password
 	temp := r.Header.Get("Authorization")
 	if len(temp) < 7 {
-		h.isBreak = true
+		u.isBreak = true
 		return
 	}
 	auth := temp[7:]
 	if b, id := store.Ctrl_login(auth); !b {
-		h.isBreak = true
+		u.isBreak = true
 	} else {
-		h.ID = id
+		u.ID = id
 	}
 }
-func (h *handle) Post(w http.ResponseWriter, r *http.Request) {
+func (h *handle) Post(w http.ResponseWriter, r *http.Request, u *user) {
 }
