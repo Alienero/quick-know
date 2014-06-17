@@ -75,15 +75,17 @@ func (c *conn) serve() {
 		glog.Errorf("conn.SetKeepAlive() error(%v)\n", err)
 		return
 	}
-	if err = tcp.SetReadDeadline(time.Second * Conf.ReadTimeout); err != nil {
-		glog.Errorf("conn.SetReadDeadline() error(%v)\n", err)
-		return
-	}
-	if err = tcp.SetWriteDeadline(time.Second * Conf.WriteTimeout); err != nil {
-		glog.Errorf("conn.SetWriteDeadline() error(%v)\n", err)
-		return
-	}
+	// if err = tcp.SetReadDeadline(time.Second * Conf.ReadTimeout); err != nil {
+	// 	glog.Errorf("conn.SetReadDeadline() error(%v)\n", err)
+	// 	return
+	// }
+	// if err = tcp.SetWriteDeadline(time.Second * Conf.WriteTimeout); err != nil {
+	// 	glog.Errorf("conn.SetWriteDeadline() error(%v)\n", err)
+	// 	return
+	// }
 	packRW := spp.NewConn(tcp)
+	packRW.SetWriteDeadline(time.Duration(Conf.WriteTimeout))
+	packRW.SetReadDeadline(time.Duration(Conf.ReadTimeout))
 	var l listener
 	if l, err = login(packRW, c.typ); err != nil {
 		glog.Errorf("Login error :%v\n", err)

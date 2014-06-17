@@ -17,19 +17,19 @@ func Init() (err error) {
 	if err != nil {
 		return
 	}
-	err = connect(sei_user, Config.UserAddr)
+	err = connect(&sei_user, Config.UserAddr)
 	if err != nil {
 		return
 	}
-	err = connect(sei_msg, Config.MsgAddr)
+	err = connect(&sei_msg, Config.MsgAddr)
 	return
 }
 
-func connect(sei *mgo.Session, addr string) (err error) {
-	if sei != nil {
+func connect(sei **mgo.Session, addr string) (err error) {
+	if *sei != nil {
 		sei.Close()
 	}
-	sei, err = mgo.Dial(addr)
+	*sei, err = mgo.Dial(addr)
 	sei.EnsureSafe(&mgo.Safe{})
 	sei.SetMode(mgo.Monotonic, true)
 	sei.Refresh()

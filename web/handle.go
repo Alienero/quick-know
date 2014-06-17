@@ -26,7 +26,7 @@ func (this *private_msg) Post(w http.ResponseWriter, r *http.Request) {
 		glog.Errorf("push private msg error%v\n", err)
 		return
 	}
-	if store.IsUserExist(msg.ToID, this.ID) {
+	if store.IsUserExist(msg.To_id, this.ID) {
 		msg.Owner = this.ID
 		msg.Msg_id = get_uuid()
 		comet.WriteOnlineMsg(msg)
@@ -71,10 +71,14 @@ func (this *del_user) Post(w http.ResponseWriter, r *http.Request) {
 		glog.Errorf("add user error%v\n", err)
 		return
 	}
-	store.DelUser(u.Id, this.ID)
-	io.WriteString(w, `{id":"`)
-	io.WriteString(w, u.Id)
-	io.WriteString(w, `"}`)
+	if err := store.DelUser(u.Id, this.ID); err != nil {
+		glog.Errorf("Del user in the web error:%v", err)
+		io.WriteString(w, `{id":"`)
+		io.WriteString(w, u.Id)
+		io.WriteString(w, `"}`)
+	} else {
+		io.WriteString(w, `{Status":"Fail"}`)
+	}
 }
 
 // Add sub msg
@@ -109,11 +113,16 @@ func (this *del_sub) Post(w http.ResponseWriter, r *http.Request) {
 		glog.Errorf("Get a new sub error%v\n", err)
 		return
 	}
-	store.DelSub(sub.Id, this.ID)
-	// Write the response
-	io.WriteString(w, `{sub_id":"`)
-	io.WriteString(w, sub.Id)
-	io.WriteString(w, `"}`)
+
+	if err := store.DelSub(sub.Id, this.ID); err != nil {
+		// Write the response
+		glog.Errorf("Del sub in the web error:%v", err)
+		io.WriteString(w, `{sub_id":"`)
+		io.WriteString(w, sub.Id)
+		io.WriteString(w, `"}`)
+	} else {
+		io.WriteString(w, `{Status":"Fail"}`)
+	}
 }
 
 // Add use into msg's sub group
@@ -137,7 +146,7 @@ func (this *sub_msg) Post(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Remove ues from the msg
+// Remove user from the sub group
 type rm_msg_sub struct {
 	handle
 }
@@ -169,7 +178,7 @@ func (this *broadcast) Post(w http.ResponseWriter, r *http.Request) {
 		glog.Errorf("push private msg error%v\n", err)
 		return
 	}
-	if store.IsUserExist(msg.ToID, this.ID) && msg.ToID == "" {
+	if store.IsUserExist(msg.To_id, this.ID) && msg.To_id == "" {
 		msg.Owner = this.ID
 		msg.Msg_id = get_uuid()
 
@@ -180,7 +189,7 @@ func (this *broadcast) Post(w http.ResponseWriter, r *http.Request) {
 				if !ok {
 					break
 				}
-				msg.ToID = s
+				msg.To_id = s
 				comet.WriteOnlineMsg(msg)
 			}
 		}()
@@ -221,7 +230,7 @@ func (this *group_msg) Post(w http.ResponseWriter, r *http.Request) {
 				if !ok {
 					break
 				}
-				mc.Msg.ToID = s
+				mc.Msg.To_id = s
 				comet.WriteOnlineMsg(mc.Msg)
 			}
 		}()
