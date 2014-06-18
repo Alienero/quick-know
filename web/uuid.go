@@ -19,7 +19,7 @@ var lock = new(sync.Mutex)
 func get_uuid() string {
 	h := md5.New()
 	lock.Lock()
-	io.WriteString(h, strconv.FormatInt(time.Now().Unix(), 10))
+	io.WriteString(h, strconv.FormatInt(time.Now().UTC().UnixNano(), 10))
 	lock.Unlock()
 	return strings.Replace(fmt.Sprintf("% x", h.Sum(nil)), " ", "", -1)
 }
