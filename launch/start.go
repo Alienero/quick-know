@@ -26,7 +26,7 @@ func main() {
 		glog.Fatal(err)
 	}
 	glog.Infoln("Loading web server")
-	if err := web.Init(); err != nil {
+	if err := web.InitConf(); err != nil {
 		glog.Fatal(err)
 	}
 

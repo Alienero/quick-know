@@ -107,6 +107,7 @@ func login(rw *spp.Conn, typ int) (l listener, err error) {
 	var pack *spp.Pack
 	pack, err = rw.ReadPack()
 	if err != nil {
+		glog.Error("Read login pack error")
 		return
 	}
 	if pack.Typ != LOGIN {
@@ -117,6 +118,7 @@ func login(rw *spp.Conn, typ int) (l listener, err error) {
 	var req *loginRequst
 	req, err = getLoginRequst(pack.Body)
 	if err != nil {
+		glog.Error("Read login request error")
 		return
 	}
 	if req.Typ != typ {

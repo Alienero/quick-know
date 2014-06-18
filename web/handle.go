@@ -15,11 +15,7 @@ import (
 )
 
 // Push a private msg
-type private_msg struct {
-	handle
-}
-
-func (this *private_msg) Post(w http.ResponseWriter, r *http.Request, u *user) {
+func private_msg(w http.ResponseWriter, r *http.Request, u *user) {
 	msg := new(store.Msg)
 	err := readAdnGet(r.Body, msg)
 	if err != nil {
@@ -41,17 +37,15 @@ func (this *private_msg) Post(w http.ResponseWriter, r *http.Request, u *user) {
 }
 
 // Add a new user
-type add_user struct {
-	handle
-}
-
-func (this *add_user) Post(w http.ResponseWriter, r *http.Request, uu *user) {
+func add_user(w http.ResponseWriter, r *http.Request, uu *user) {
+	glog.Info("Add a new user(Client)")
 	u := new(store.User)
 	err := readAdnGet(r.Body, u)
 	if err != nil {
 		glog.Errorf("add user error%v\n", err)
 		return
 	}
+	u.Owner = uu.ID
 	u.Id = get_uuid()
 	store.AddUser(u)
 	io.WriteString(w, `{id":"`)
@@ -60,11 +54,7 @@ func (this *add_user) Post(w http.ResponseWriter, r *http.Request, uu *user) {
 }
 
 // Delete a user
-type del_user struct {
-	handle
-}
-
-func (this *del_user) Post(w http.ResponseWriter, r *http.Request, uu *user) {
+func del_user(w http.ResponseWriter, r *http.Request, uu *user) {
 	u := new(store.User)
 	err := readAdnGet(r.Body, u)
 	if err != nil {
@@ -82,11 +72,7 @@ func (this *del_user) Post(w http.ResponseWriter, r *http.Request, uu *user) {
 }
 
 // Add sub group
-type add_sub struct {
-	handle
-}
-
-func (this *add_sub) Post(w http.ResponseWriter, r *http.Request, uu *user) {
+func add_sub(w http.ResponseWriter, r *http.Request, uu *user) {
 	sub := new(store.Sub)
 	err := readAdnGet(r.Body, sub)
 	if err != nil {
@@ -102,11 +88,7 @@ func (this *add_sub) Post(w http.ResponseWriter, r *http.Request, uu *user) {
 }
 
 // Del sub msg
-type del_sub struct {
-	handle
-}
-
-func (this *del_sub) Post(w http.ResponseWriter, r *http.Request, uu *user) {
+func del_sub(w http.ResponseWriter, r *http.Request, uu *user) {
 	sub := new(store.Sub)
 	err := readAdnGet(r.Body, sub)
 	if err != nil {
@@ -126,11 +108,7 @@ func (this *del_sub) Post(w http.ResponseWriter, r *http.Request, uu *user) {
 }
 
 // Add use into msg's sub group
-type user_sub struct {
-	handle
-}
-
-func (this *user_sub) Post(w http.ResponseWriter, r *http.Request, uu *user) {
+func user_sub(w http.ResponseWriter, r *http.Request, uu *user) {
 	sm := new(store.Sub_map)
 	err := readAdnGet(r.Body, sm)
 	if err != nil {
@@ -147,11 +125,7 @@ func (this *user_sub) Post(w http.ResponseWriter, r *http.Request, uu *user) {
 }
 
 // Remove user from the sub group
-type rm_user_sub struct {
-	handle
-}
-
-func (this *rm_user_sub) Post(w http.ResponseWriter, r *http.Request, uu *user) {
+func rm_user_sub(w http.ResponseWriter, r *http.Request, uu *user) {
 	sm := new(store.Sub_map)
 	err := readAdnGet(r.Body, sm)
 	if err != nil {
@@ -167,11 +141,7 @@ func (this *rm_user_sub) Post(w http.ResponseWriter, r *http.Request, uu *user) 
 }
 
 // Send msg to all
-type broadcast struct {
-	handle
-}
-
-func (this *broadcast) Post(w http.ResponseWriter, r *http.Request, uu *user) {
+func broadcast(w http.ResponseWriter, r *http.Request, uu *user) {
 	msg := new(store.Msg)
 	err := readAdnGet(r.Body, msg)
 	if err != nil {
@@ -204,11 +174,7 @@ func (this *broadcast) Post(w http.ResponseWriter, r *http.Request, uu *user) {
 }
 
 // Send msg to sub group
-type group_msg struct {
-	handle
-}
-
-func (this *group_msg) Post(w http.ResponseWriter, r *http.Request, uu *user) {
+func group_msg(w http.ResponseWriter, r *http.Request, uu *user) {
 	type multi_cast struct {
 		Sub_id string
 		Msg    *store.Msg
