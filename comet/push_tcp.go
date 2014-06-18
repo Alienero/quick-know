@@ -84,8 +84,8 @@ func (c *conn) serve() {
 	// 	return
 	// }
 	packRW := spp.NewConn(tcp)
-	packRW.SetWriteDeadline(time.Duration(Conf.WriteTimeout))
-	packRW.SetReadDeadline(time.Duration(Conf.ReadTimeout))
+	packRW.SetWriteDeadline(time.Duration(Conf.WriteTimeout) * time.Second)
+	packRW.SetReadDeadline(time.Duration(Conf.ReadTimeout) * time.Second)
 	var l listener
 	if l, err = login(packRW, c.typ); err != nil {
 		glog.Errorf("Login error :%v\n", err)
@@ -107,6 +107,7 @@ func login(rw *spp.Conn, typ int) (l listener, err error) {
 	var pack *spp.Pack
 	pack, err = rw.ReadPack()
 	if err != nil {
+		glog.Error("Read login pack error")
 		return
 	}
 	if pack.Typ != LOGIN {
@@ -117,6 +118,7 @@ func login(rw *spp.Conn, typ int) (l listener, err error) {
 	var req *loginRequst
 	req, err = getLoginRequst(pack.Body)
 	if err != nil {
+		glog.Error("Read login request error")
 		return
 	}
 	if req.Typ != typ {

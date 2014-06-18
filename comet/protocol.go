@@ -49,6 +49,7 @@ func getLoginRequst(data []byte) (l *loginRequst, err error) {
 	if err != nil {
 		return
 	}
+
 	pswLen, err := buf.readByte()
 	if err != nil {
 		return
@@ -57,6 +58,7 @@ func getLoginRequst(data []byte) (l *loginRequst, err error) {
 	if err != nil {
 		return
 	}
+
 	owLen, err := buf.readByte()
 	if err != nil {
 		return

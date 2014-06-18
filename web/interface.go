@@ -6,15 +6,13 @@ package web
 
 // The pack use default mux
 import (
+	"encoding/base64"
 	"net/http"
+	"strings"
 
 	"github.com/Alienero/quick-know/store"
+	"github.com/golang/glog"
 )
-
-func Init() error {
-	// Init handle into mux
-	return nil
-}
 
 type user struct {
 	ID      string
@@ -22,12 +20,14 @@ type user struct {
 }
 
 type handle struct {
+	Post func(w http.ResponseWriter, r *http.Request, uu *user)
 }
 
 func (h *handle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	u := new(user)
 	h.prepare(w, r, u)
 	if u.isBreak {
+		glog.Info("Login fail")
 		http.Error(w, "", http.StatusForbidden)
 		return
 	}
@@ -35,6 +35,7 @@ func (h *handle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "POST":
 		h.Post(w, r, u)
 	default:
+		glog.Info("No define method")
 		http.Error(w, "", http.StatusMethodNotAllowed)
 	}
 }
@@ -45,12 +46,19 @@ func (h *handle) prepare(w http.ResponseWriter, r *http.Request, u *user) {
 		u.isBreak = true
 		return
 	}
-	auth := temp[7:]
-	if b, id := store.Ctrl_login(auth); !b {
+	auth := strings.TrimLeft(temp, " ")[6:]
+	buf, err := base64.StdEncoding.DecodeString(auth)
+	if err != nil {
+		u.isBreak = true
+		glog.Errorf("Decode string(%v) from base64 error:%v", auth, err)
+		return
+	}
+	if b, id := store.Ctrl_login(string(buf)); !b {
 		u.isBreak = true
 	} else {
 		u.ID = id
 	}
 }
-func (h *handle) Post(w http.ResponseWriter, r *http.Request, u *user) {
-}
+
+// func (h *handle) Post(w http.ResponseWriter, r *http.Request, uu *user) {
+// }
