@@ -5,8 +5,11 @@
 package comet
 
 import (
+	"bufio"
+	"bytes"
 	"encoding/json"
-	"io/ioutil"
+	"os"
+	"strings"
 )
 
 var Conf = &config{}
@@ -25,13 +28,25 @@ type config struct {
 }
 
 func InitConf() error {
-	data, err := ioutil.ReadFile("comet.conf")
+	buf := new(bytes.Buffer)
+
+	f, err := os.Open("comet.conf")
 	if err != nil {
 		return err
 	}
-	err = json.Unmarshal(data, Conf)
-	if err != nil {
-		return err
+	defer f.Close()
+	r := bufio.NewReader(f)
+	for {
+		line, err := r.ReadSlice('\n')
+		if err != nil {
+			if len(line) > 0 {
+				buf.Write(line)
+			}
+			break
+		}
+		if !strings.HasPrefix(strings.TrimLeft(string(line), "\t "), "//") {
+			buf.Write(line)
+		}
 	}
-	return nil
+	return json.Unmarshal(buf.Bytes(), Conf)
 }

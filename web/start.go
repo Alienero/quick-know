@@ -1,15 +1,10 @@
 package web
 
 import (
-	"flag"
 	"net/http"
 )
 
 func Start() {
-	flag.Parse()
-	if err := Init(); err != nil {
-		panic(err)
-	}
 	// Add the mux into the web server
 	http.Handle("/push/private", &private_msg{})
 	http.Handle("/push/add_user", &add_user{})

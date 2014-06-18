@@ -6,9 +6,11 @@ package web
 
 // The pack use default mux
 import (
+	"encoding/base64"
 	"net/http"
 
 	"github.com/Alienero/quick-know/store"
+	"github.com/golang/glog"
 )
 
 func Init() error {
@@ -46,7 +48,13 @@ func (h *handle) prepare(w http.ResponseWriter, r *http.Request, u *user) {
 		return
 	}
 	auth := temp[7:]
-	if b, id := store.Ctrl_login(auth); !b {
+	buf, err := base64.StdEncoding.DecodeString(auth)
+	if err != nil {
+		u.isBreak = true
+		glog.Errorf("Decode the base64 error:%v", err)
+		return
+	}
+	if b, id := store.Ctrl_login(string(buf)); !b {
 		u.isBreak = true
 	} else {
 		u.ID = id
