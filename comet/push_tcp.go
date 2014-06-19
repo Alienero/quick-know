@@ -134,13 +134,19 @@ func login(rw *spp.Conn, typ int) (l listener, err error) {
 		}
 		// Has been already logon
 		if tc := Users.Get(req.Id); tc != nil {
-			select {
-			case tc.CloseChan <- 1:
-				// pass
-			case <-time.After(3 * time.Second):
-				return nil, errors.New("Close the logon user timeout")
+			if tc.LetClose() {
+				select {
+				case tc.CloseChan <- 1:
+					<-tc.CloseChan
+				case <-time.After(3 * time.Second):
+					if tc := Users.Get(req.Id); tc != nil {
+						return nil, errors.New("Close the logon user timeout")
+					}
+				}
+			} else {
+				return nil, errors.New("Has been relogining")
 			}
-			<-tc.CloseChan
+
 		}
 		c := newClient(rw, req.Id)
 		Users.Set(req.Id, c)

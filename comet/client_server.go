@@ -32,6 +32,8 @@ type client struct {
 
 	isStop bool
 	lock   *sync.Mutex
+
+	isLetClose bool
 }
 
 func newClient(rw *spp.Conn, id string) *client {
@@ -203,10 +205,21 @@ func (c *client) pushMsg(msg *store.Msg) (err error) {
 func (c *client) setPack(typ int, body []byte) (*spp.Pack, error) {
 	return c.queue.rw.SetDefaultPack(typ, body)
 }
+func (c *client) LetClose() bool {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	if !c.isLetClose {
+		c.isLetClose = true
+		return true
+	} else {
+		return false
+	}
+}
 
 func WriteOnlineMsg(msg *store.Msg) {
 	c := Users.Get(msg.To_id)
 	if c == nil {
+		msg.Typ = OFFLINE
 		store.InsertOfflineMsg(msg)
 		return
 	}
