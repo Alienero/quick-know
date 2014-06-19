@@ -11,10 +11,10 @@ import (
 	"labix.org/v2/mgo/bson"
 )
 
-const (
-	OFFLINE = 11
-	ONLINE  = 12
-)
+// const (
+// 	OFFLINE = 11
+// 	ONLINE  = 12
+// )
 
 type Msg struct {
 	Msg_id string // Msg ID
@@ -55,6 +55,7 @@ func GetOfflineMsg(id string, fin <-chan byte) <-chan *Msg {
 		if !flag {
 			// not recive the fin. wait the fin
 			<-fin
+			glog.Info("Recive fin (offline msg)")
 		}
 		close(ch)
 	}()

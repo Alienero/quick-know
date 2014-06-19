@@ -16,6 +16,7 @@ import (
 
 // Push a private msg
 func private_msg(w http.ResponseWriter, r *http.Request, u *user) {
+	glog.Info("Add a private msg")
 	msg := new(store.Msg)
 	err := readAdnGet(r.Body, msg)
 	if err != nil {
@@ -80,6 +81,7 @@ func add_sub(w http.ResponseWriter, r *http.Request, uu *user) {
 		return
 	}
 	sub.Id = get_uuid()
+	sub.Own = uu.ID
 	store.AddSub(sub)
 	// Write the response
 	io.WriteString(w, `{sub_id":"`)

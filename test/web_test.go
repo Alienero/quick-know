@@ -2,15 +2,15 @@ package test
 
 import (
 	"bytes"
-	// "encoding/base64"
-	// "encoding/json"
-	// "io/ioutil"
+	"encoding/base64"
+	"encoding/json"
+	"io/ioutil"
 	"net"
-	// "net/http"
+	"net/http"
 	"testing"
 
 	"github.com/Alienero/quick-know/comet"
-	// "github.com/Alienero/quick-know/store"
+	"github.com/Alienero/quick-know/store"
 	"github.com/Alienero/spp"
 )
 
@@ -48,35 +48,35 @@ import (
 // 	// req,err = http.NewRequest("POST", "http://127.0.0.1:9901", body)
 // }
 
-// func TestGetPrivateMsg(t *testing.T) {
-// 	u := &store.Msg{Body: []byte("hello push server"), To_id: "29d2b76f47e4f2e36e732a53c74e2731"}
-// 	data, err := json.Marshal(u)
-// 	if err != nil {
-// 		t.Error(err)
-// 		return
-// 	}
+func TestGetPrivateMsg(t *testing.T) {
+	u := &store.Msg{Body: []byte("hello push server"), To_id: "29d2b76f47e4f2e36e732a53c74e2731"}
+	data, err := json.Marshal(u)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
-// 	req, err := http.NewRequest("POST", "http://127.0.0.1:9901/push/private", bytes.NewReader(data))
-// 	if err != nil {
-// 		t.Error(err)
-// 		return
-// 	}
-// 	c := new(http.Client)
-// 	str := base64.StdEncoding.EncodeToString([]byte("test001"))
-// 	// req.SetBasicAuth("username", "password")
+	req, err := http.NewRequest("POST", "http://127.0.0.1:9901/push/private", bytes.NewReader(data))
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	c := new(http.Client)
+	str := base64.StdEncoding.EncodeToString([]byte("test001"))
+	// req.SetBasicAuth("username", "password")
 
-// 	req.Header.Add("Authorization", " Basic "+str)
-// 	resp, err := c.Do(req)
-// 	if err != nil {
-// 		t.Error(err)
-// 		return
-// 	}
-// 	s, err := ioutil.ReadAll(resp.Body)
-// 	if err != nil {
-// 		println(err.Error())
-// 	}
-// 	println(string(s))
-// }
+	req.Header.Add("Authorization", " Basic "+str)
+	resp, err := c.Do(req)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	s, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		println(err.Error())
+	}
+	println(string(s))
+}
 
 func TestPrivateMsg(t *testing.T) {
 	// Recive the offline msg
@@ -106,7 +106,7 @@ func TestPrivateMsg(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	c.WritePack(pack)
+	c.WritePack(pack) // login
 	// Recive the response pack
 	_, err = c.ReadPack()
 	if err != nil {
@@ -120,4 +120,20 @@ func TestPrivateMsg(t *testing.T) {
 		return
 	}
 	println(string(pack.Body))
+
+	// Response the msg
+	msg := new(store.Msg)
+	if err := json.Unmarshal(pack.Body, msg); err != nil {
+		t.Error(err)
+		return
+	}
+	pack, err = c.SetDefaultPack(41, []byte(msg.Msg_id))
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if err = c.WritePack(pack); err != nil {
+		t.Error(err)
+	}
+
 }

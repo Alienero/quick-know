@@ -20,8 +20,9 @@ const (
 	PUSH_MSG  = 22
 
 	// Client requst type
-	OFFLINE    = 11
-	ONLINE     = 12
+	OFFLINE = 41
+	ONLINE  = 42
+
 	HEART_BEAT = 31
 
 	LOGIN  = 101
@@ -89,8 +90,18 @@ func getbeat_heartResp(status bool) ([]byte, error) {
 	return marshalJson(resp)
 }
 
+// Get the msg's data
 func getMsg(msg *store.Msg) ([]byte, error) {
-	return marshalJson(msg)
+	type user_msg struct {
+		Body   []byte
+		Msg_id string
+		Typ    int
+	}
+	return marshalJson(&user_msg{
+		Body:   msg.Body,
+		Msg_id: msg.Msg_id,
+		Typ:    msg.Typ,
+	})
 }
 
 func marshalJson(v interface{}) ([]byte, error) {

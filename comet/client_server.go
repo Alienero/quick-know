@@ -40,6 +40,9 @@ func newClient(rw *spp.Conn, id string) *client {
 		id:        id,
 		CloseChan: make(chan byte),
 		lock:      new(sync.Mutex),
+
+		offlines: make(chan *store.Msg, Conf.MaxCacheMsg),
+		onlines:  make(chan *store.Msg, Conf.MaxCacheMsg),
 	}
 }
 
@@ -70,6 +73,7 @@ loop:
 
 		case msg = <-c.offlines:
 			// Push the offline msg
+			glog.Info("One offline msg")
 			if msg == nil {
 				isOfflineClose = true
 				// Close the offline chan
@@ -77,12 +81,14 @@ loop:
 				glog.Errorln("offlines has been close")
 				break
 			}
+			// msg.Typ = OFFLINE
 			err = c.pushMsg(msg)
 			if err != nil {
 				break loop
 			}
 		case msg = <-c.onlines:
 			// Push the online msg
+			glog.Info("One online msg")
 			// Add the msg into cache
 			if msg == nil {
 				glog.Errorln("onlines has been close")
@@ -92,6 +98,7 @@ loop:
 				err = fmt.Errorf("Online msg is out of range:%v", len(c.onlineCache))
 				break loop
 			}
+			msg.Typ = ONLINE
 			c.onlineCache[msg.Msg_id] = msg
 			err = c.pushMsg(msg)
 			if err != nil {
@@ -102,21 +109,27 @@ loop:
 			// if it return a timeout error, illustrate
 			// hava not recive a heart beat pack at an
 			// given time.
+			// glog.Infof("One client msg(%v)\n",pAndErr.pack)
 			if pAndErr.err != nil {
+				glog.Info("Get error will break")
 				err = pAndErr.err
 				break loop
 			}
+			glog.Infof("One client msg(%v)\n", pAndErr.pack.Typ)
 
 			// Choose the requst type
-			switch pAndErr.pack.Body[1] {
+			switch pAndErr.pack.Typ {
 			case OFFLINE:
 				// Del the offline msg in the store
-				store.DelOfflineMsg(string(pAndErr.pack.Body[1:]), c.id)
+				glog.Info("Del a offline msg")
+				store.DelOfflineMsg(string(pAndErr.pack.Body), c.id)
 			case ONLINE:
 				// Del the online msg in the msg cache
-				delete(c.onlineCache, string(pAndErr.pack.Body[1:]))
+				glog.Info("Del a online msg")
+				delete(c.onlineCache, string(pAndErr.pack.Body))
 			case HEART_BEAT:
 				// Reply the heart beat
+				glog.Info("hb msg")
 				pack, err = c.setPack(HEART_BEAT, []byte("OK"))
 				if err != nil {
 					break loop
@@ -131,6 +144,8 @@ loop:
 			}
 		case <-c.CloseChan:
 			// Start close
+			glog.Info("Will break new relogin")
+			c.isSendClose = true
 			break loop
 
 		}
@@ -139,16 +154,21 @@ loop:
 	// Wrte the onlines msg to the db
 	// Free resources
 	// Close channels
+	glog.Info("Has been break")
 	if isOfflineClose {
+		glog.Info("One fin")
 		noticeFin <- 1
 	} else {
+		glog.Info("Two fin")
 		for i := 0; i < 2; i++ {
 			noticeFin <- 1
 		}
 	}
+	glog.Info("Check Lock")
 
 	// Wrte the onlines msg to the db
 	for _, v := range c.onlineCache {
+		v.Typ = OFFLINE
 		store.InsertOfflineMsg(v)
 	}
 
@@ -156,11 +176,12 @@ loop:
 	Users.Del(c.id)
 	c.lock.Lock()
 	c.isStop = true
-	c.lock.Unlock()
 	close(c.onlines)
+	c.lock.Unlock()
 	if c.isSendClose {
 		c.CloseChan <- 0
 	}
+	close(c.CloseChan)
 
 	return
 }
@@ -191,11 +212,19 @@ func WriteOnlineMsg(msg *store.Msg) {
 	}
 	// defer c.lock.Unlock()
 	c.lock.Lock()
+	if len(c.onlines) == Conf.MaxCacheMsg {
+		msg.Typ = OFFLINE
+		store.InsertOfflineMsg(msg)
+		c.lock.Unlock()
+		return
+	}
 	if c.isStop {
 		c.lock.Unlock()
+		msg.Typ = OFFLINE
 		store.InsertOfflineMsg(msg)
 	} else {
-		c.lock.Unlock()
+		msg.Typ = ONLINE
 		c.onlines <- msg
+		c.lock.Unlock()
 	}
 }

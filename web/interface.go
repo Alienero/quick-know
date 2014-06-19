@@ -33,6 +33,7 @@ func (h *handle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	switch r.Method {
 	case "POST":
+		glog.Info("Do the post method")
 		h.Post(w, r, u)
 	default:
 		glog.Info("No define method")

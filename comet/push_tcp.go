@@ -5,6 +5,7 @@
 package comet
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"runtime"
@@ -133,7 +134,12 @@ func login(rw *spp.Conn, typ int) (l listener, err error) {
 		}
 		// Has been already logon
 		if tc := Users.Get(req.Id); tc != nil {
-			tc.CloseChan <- 1
+			select {
+			case tc.CloseChan <- 1:
+				// pass
+			case <-time.After(3 * time.Second):
+				return nil, errors.New("Close the logon user timeout")
+			}
 			<-tc.CloseChan
 		}
 		c := newClient(rw, req.Id)
