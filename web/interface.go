@@ -54,7 +54,14 @@ func (h *handle) prepare(w http.ResponseWriter, r *http.Request, u *user) {
 		glog.Errorf("Decode string(%v) from base64 error:%v", auth, err)
 		return
 	}
-	if b, id := store.Ctrl_login(string(buf)); !b {
+	kp := string(buf)
+	index := strings.Index(kp, ":")
+	if index < 0 || index > len(kp) {
+		u.isBreak = true
+		glog.Error("auth basic string out of range")
+		return
+	}
+	if b, id := store.Ctrl_login(kp[:index], kp[index+1:]); !b {
 		u.isBreak = true
 	} else {
 		u.ID = id

@@ -33,12 +33,12 @@ func Client_login(id, psw, owner string) bool {
 	}
 	return true
 }
-func Ctrl_login(auth string) (bool, string) {
+func Ctrl_login(id, auth string) (bool, string) {
 	sei := sei_user.New()
 	defer sei.Refresh()
 	c := sei.DB(Config.UserName).C(Config.Ctrls)
 	var u = new(Ctrl)
-	it := c.Find(bson.M{"auth": auth}).Iter()
+	it := c.Find(bson.M{"auth": auth, "id": id}).Iter()
 	defer it.Close()
 	if !it.Next(u) {
 		return false, ""
