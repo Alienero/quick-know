@@ -16,8 +16,9 @@ const (
 	CLIENT  = 0
 	CSERVER = 1
 
-	PUSH_INFO = 21
-	PUSH_MSG  = 22
+	PUSH_INFO    = 21
+	PUSH_MSG     = 22
+	PUSH_OFFLINE = 23
 
 	// Client requst type
 	OFFLINE = 41
@@ -91,19 +92,30 @@ func getbeat_heartResp(status bool) ([]byte, error) {
 }
 
 // Get the msg's data
+type user_msg struct {
+	Body   []byte
+	Msg_id string
+	Typ    int
+}
+
 func getMsg(msg *store.Msg) ([]byte, error) {
-	type user_msg struct {
-		Body   []byte
-		Msg_id string
-		Typ    int
-	}
-	return marshalJson(&user_msg{
+	return marshalJson(getUserMsg(msg))
+}
+func getUserMsg(msg *store.Msg) *user_msg {
+	return &user_msg{
 		Body:   msg.Body,
 		Msg_id: msg.Msg_id,
 		Typ:    msg.Typ,
-	})
+	}
 }
 
+type offineMsg struct {
+	Ms []*user_msg
+}
+
+func getOffineMsg(msg *offineMsg) ([]byte, error) {
+	return marshalJson(msg)
+}
 func marshalJson(v interface{}) ([]byte, error) {
 	body, err := json.Marshal(v)
 	if err != nil {

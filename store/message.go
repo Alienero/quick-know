@@ -5,16 +5,11 @@
 package store
 
 import (
-	// "time"
+	"time"
 
 	"github.com/golang/glog"
 	"labix.org/v2/mgo/bson"
 )
-
-// const (
-// 	OFFLINE = 11
-// 	ONLINE  = 12
-// )
 
 type Msg struct {
 	Msg_id string // Msg ID
@@ -26,9 +21,6 @@ type Msg struct {
 	Expired int64
 }
 
-// BUG[#1]: if channel has been clsoe , but client server has benn not recive the nil msg
-// it will send the fin(1) to the channel and wait. The stack has been not exist, so it will
-// become a dead lock.
 func GetOfflineMsg(id string, fin <-chan byte) <-chan *Msg {
 	// defer recover()
 	// Find in the db
@@ -41,8 +33,16 @@ func GetOfflineMsg(id string, fin <-chan byte) <-chan *Msg {
 		defer iter.Close()
 		msg := new(Msg)
 		flag := false
+		// Check time expired
 	loop:
 		for iter.Next(msg) {
+			if msg.Expired > 0 {
+				if time.Now().UTC().Unix() > msg.Expired {
+					// Delet the offline msg in the BD
+					DelOfflineMsg(msg.Msg_id, id)
+					continue
+				}
+			}
 			select {
 			case ch <- msg:
 				msg = new(Msg)
