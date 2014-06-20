@@ -8,8 +8,6 @@ import (
 	"fmt"
 
 	"github.com/Alienero/spp"
-
-	"github.com/golang/glog"
 )
 
 // Tcp write queue
@@ -104,12 +102,8 @@ func (queue *PackQueue) ReadPackInLoop(fin <-chan byte) <-chan *packAndErr {
 			p.pack, p.err = queue.rw.ReadPack()
 			select {
 			case ch <- p:
-				// if p.err != nil {
-				// 	break loop
-				// }
 				// Without anything to do
 			case <-fin:
-				glog.Info("Recive fin (read loop chan)")
 				break loop
 			}
 			p = new(packAndErr)

@@ -26,6 +26,9 @@ const (
 
 	HEART_BEAT = 31
 
+	SINGEL = 51
+	MUTIL  = 52
+
 	LOGIN  = 101
 	LONGON = 102
 )
@@ -116,6 +119,15 @@ type offineMsg struct {
 func getOffineMsg(msg *offineMsg) ([]byte, error) {
 	return marshalJson(msg)
 }
+
+type singleMsg struct {
+	Id  string
+	Typ int
+}
+type mutilMsg struct {
+	Msgs []*singleMsg
+}
+
 func marshalJson(v interface{}) ([]byte, error) {
 	body, err := json.Marshal(v)
 	if err != nil {

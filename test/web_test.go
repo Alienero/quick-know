@@ -48,7 +48,7 @@ import (
 // 	// req,err = http.NewRequest("POST", "http://127.0.0.1:9901", body)
 // }
 
-func TestGetPrivateMsg(t *testing.T) {
+func addMsg(t *testing.T) {
 	u := &store.Msg{Body: []byte("hello push server"), To_id: "29d2b76f47e4f2e36e732a53c74e2731"}
 	data, err := json.Marshal(u)
 	if err != nil {
@@ -62,7 +62,7 @@ func TestGetPrivateMsg(t *testing.T) {
 		return
 	}
 	c := new(http.Client)
-	str := base64.StdEncoding.EncodeToString([]byte("test001"))
+	str := base64.StdEncoding.EncodeToString([]byte("615582195:1"))
 	// req.SetBasicAuth("username", "password")
 
 	req.Header.Add("Authorization", " Basic "+str)
@@ -77,9 +77,7 @@ func TestGetPrivateMsg(t *testing.T) {
 	}
 	println(string(s))
 }
-
-func TestPrivateMsg(t *testing.T) {
-	// Recive the offline msg
+func loginAndGetMsg(t *testing.T) {
 	conn, err := net.Dial("tcp", "127.0.0.1:9900")
 	if err != nil {
 		t.Error(err)
@@ -135,5 +133,12 @@ func TestPrivateMsg(t *testing.T) {
 	if err = c.WritePack(pack); err != nil {
 		t.Error(err)
 	}
+}
 
+func TestPrivateMsg(t *testing.T) {
+	addMsg(t)
+	// addMsg(t)
+	// go loginAndGetMsg(t)
+	// loginAndGetMsg(t)
+	loginAndGetMsg(t)
 }

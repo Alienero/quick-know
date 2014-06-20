@@ -134,9 +134,14 @@ func login(rw *spp.Conn, typ int) (l listener, err error) {
 		}
 		// Has been already logon
 		if tc := Users.Get(req.Id); tc != nil {
-			if tc.LetClose() {
+			tc.lock.Lock()
+			if !tc.isLetClose {
+				tc.lock.Unlock()
 				select {
 				case tc.CloseChan <- 1:
+					tc.lock.Lock()
+					tc.isLetClose = true
+					tc.lock.Unlock()
 					<-tc.CloseChan
 				case <-time.After(3 * time.Second):
 					if tc := Users.Get(req.Id); tc != nil {

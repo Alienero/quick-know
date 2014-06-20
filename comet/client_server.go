@@ -50,8 +50,8 @@ func newClient(rw *spp.Conn, id string) *client {
 		offlines: make(chan *store.Msg, Conf.MaxCacheMsg),
 		onlines:  make(chan *store.Msg, Conf.MaxCacheMsg),
 
-		onlineCache:  make(map[string]*store.Msg),
-		offlineCache: make([]*user_msg, 1),
+		onlineCache: make(map[string]*store.Msg),
+		// offlineCache: make([]*user_msg, 1),
 	}
 }
 
@@ -65,37 +65,35 @@ func (c *client) listen_loop() (e error) {
 		pack    *spp.Pack
 
 		noticeFin = make(chan byte)
+
+		findEndChan <-chan byte
 	)
 
 	// Start the write queue
 	go c.queue.writeLoop()
 
-	c.offlines = store.GetOfflineMsg(c.id, noticeFin)
+	c.offlines, findEndChan = store.GetOfflineMsg(c.id, noticeFin)
 	c.readChan = c.queue.ReadPackInLoop(noticeFin)
 
 	// Start push
 loop:
 	for {
 		select {
-
+		case <-findEndChan:
+			glog.Info("Offline has been finish send.")
+			c.isOfflineClose = true
+			if err = c.pushOfflineMsg(nil); err != nil {
+				break loop
+			}
+			break
 		case msg = <-c.offlines:
 			// Push the offline msg
 			glog.Info("Get a offline msg")
-			if msg == nil {
-				c.isOfflineClose = true
-				if err = c.pushOfflineMsg(nil); err != nil {
-					break loop
-				}
-				// Close the offline chan
-				noticeFin <- 1
-				glog.Errorln("offlines has been close")
-				break
-			}
-			// msg.Typ = OFFLINE
-			err = c.pushMsg(msg)
+			err = c.pushOfflineMsg(msg)
 			if err != nil {
 				break loop
 			}
+
 		case msg = <-c.onlines:
 			// Push the online msg
 			glog.Info("Get a online msg")
@@ -124,7 +122,6 @@ loop:
 			// if it return a timeout error, illustrate
 			// hava not recive a heart beat pack at an
 			// given time.
-			// glog.Infof("One client msg(%v)\n",pAndErr.pack)
 			if pAndErr.err != nil {
 				glog.Info("Get a connection error , will break")
 				err = pAndErr.err
@@ -134,14 +131,23 @@ loop:
 
 			// Choose the requst type
 			switch pAndErr.pack.Typ {
-			case OFFLINE:
-				// Del the offline msg in the store
-				glog.Info("Del a offline msg")
-				store.DelOfflineMsg(string(pAndErr.pack.Body), c.id)
-			case ONLINE:
-				// Del the online msg in the msg cache
-				glog.Info("Del a online msg")
-				delete(c.onlineCache, string(pAndErr.pack.Body))
+			case SINGEL:
+				sg := new(singleMsg)
+				if err = unMarshalJson(pAndErr.pack.Body, sg); err != nil {
+					glog.Errorf("Marshal a json error:%v", err)
+					break
+				}
+				c.delMsg(sg.Typ, sg.Id)
+			case MUTIL:
+				mutil := new(mutilMsg)
+				if err = unMarshalJson(pAndErr.pack.Body, mutil); err != nil {
+					glog.Errorf("Marshal a json error:%v", err)
+					break
+				}
+				for _, sg := range mutil.Msgs {
+					c.delMsg(sg.Typ, sg.Id)
+				}
+
 			case HEART_BEAT:
 				// Reply the heart beat
 				glog.Info("hb msg")
@@ -169,14 +175,9 @@ loop:
 	// Wrte the onlines msg to the db
 	// Free resources
 	// Close channels
-	if c.isOfflineClose {
+	for i := 0; i < 2; i++ {
 		noticeFin <- 1
-	} else {
-		for i := 0; i < 2; i++ {
-			noticeFin <- 1
-		}
 	}
-
 	// Wrte the onlines msg to the db
 	for _, v := range c.onlineCache {
 		v.Typ = OFFLINE
@@ -184,7 +185,6 @@ loop:
 	}
 
 	// Close the online msg channel
-	Users.Del(c.id)
 	c.lock.Lock()
 	c.isStop = true
 	close(c.onlines)
@@ -193,6 +193,8 @@ loop:
 		c.CloseChan <- 0
 	}
 	close(c.CloseChan)
+
+	Users.Del(c.id)
 
 	return
 }
@@ -211,6 +213,24 @@ func (c *client) pushMsg(msg *store.Msg) (err error) {
 	err = c.queue.WritePack(pack)
 	return
 }
+
+func (c *client) delMsg(typ int, msg_id string) {
+	switch typ {
+	case OFFLINE:
+		// Del the offline msg in the store
+		glog.Info("Del a offline msg")
+		store.DelOfflineMsg(msg_id, c.id)
+	case ONLINE:
+		// Del the online msg in the msg cache
+		glog.Info("Del a online msg")
+		delete(c.onlineCache, c.id)
+	default:
+		glog.Errorf("No define the type:%v", typ)
+	}
+}
+
+// func pushMsgs(msg []*store.Msg) (err error) {
+// }
 func (c *client) pushOfflineMsg(msg *store.Msg) (err error) {
 	// The max cache size is 20
 	if c.isOfflineClose && msg == nil {
@@ -226,8 +246,7 @@ func (c *client) pushOfflineMsg(msg *store.Msg) (err error) {
 				Ms: c.offlineCache,
 			})
 			// Clean the cache
-			c.offlineCache = make([]*user_msg, 1)
-			c.offlineCache = append(c.offlineCache, getUserMsg(msg))
+			c.offlineCache = []*user_msg{getUserMsg(msg)}
 		} else {
 			c.offlineCache = append(c.offlineCache, getUserMsg(msg))
 		}
@@ -251,16 +270,6 @@ func (c *client) sendOfflineMsg(ms *offineMsg) (err error) {
 }
 func (c *client) setPack(typ int, body []byte) (*spp.Pack, error) {
 	return c.queue.rw.SetDefaultPack(typ, body)
-}
-func (c *client) LetClose() bool {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	if !c.isLetClose {
-		c.isLetClose = true
-		return true
-	} else {
-		return false
-	}
 }
 
 func WriteOnlineMsg(msg *store.Msg) {

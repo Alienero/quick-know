@@ -21,16 +21,15 @@ type Msg struct {
 	Expired int64
 }
 
-func GetOfflineMsg(id string, fin <-chan byte) <-chan *Msg {
+func GetOfflineMsg(id string, fin <-chan byte) (<-chan *Msg, <-chan byte) {
 	// defer recover()
 	// Find in the db
 	ch := make(chan *Msg, Config.OfflineMsgs)
+	ch2 := make(chan byte, 1)
 	go func() {
 		sei := sei_msg.New()
-		defer sei.Refresh()
 		c := sei.DB(Config.MsgName).C(Config.OfflineName)
 		iter := c.Find(bson.M{"to_id": id}).Limit(Config.OfflineMsgs).Iter()
-		defer iter.Close()
 		msg := new(Msg)
 		flag := false
 		// Check time expired
@@ -47,19 +46,25 @@ func GetOfflineMsg(id string, fin <-chan byte) <-chan *Msg {
 			case ch <- msg:
 				msg = new(Msg)
 			case <-fin:
+				// No read the all offline msg, notice close
 				flag = true
 				break loop
 			}
 
 		}
+
+		iter.Close()
+		sei.Refresh()
+
+		ch2 <- 1
 		if !flag {
-			// not recive the fin. wait the fin
+			// not recive the fin. must wait the fin
 			<-fin
-			glog.Info("Recive fin (offline msg)")
 		}
 		close(ch)
+		close(ch2)
 	}()
-	return ch
+	return ch, ch2
 }
 
 // Del the offile msg
