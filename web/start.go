@@ -19,6 +19,6 @@ func Start() {
 	http.Handle("/push/group_msg", &handle{Post: group_msg})
 
 	glog.Infof("Listen at port :%v", Conf.Listen_addr)
-	http.ListenAndServe(Conf.Listen_addr, nil)
+	glog.Error(http.ListenAndServe(Conf.Listen_addr, nil))
 	// http.ListenAndServeTLS(addr, certFile, keyFile, handler)
 }

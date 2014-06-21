@@ -137,8 +137,5 @@ func loginAndGetMsg(t *testing.T) {
 
 func TestPrivateMsg(t *testing.T) {
 	addMsg(t)
-	// addMsg(t)
-	// go loginAndGetMsg(t)
-	// loginAndGetMsg(t)
 	loginAndGetMsg(t)
 }
