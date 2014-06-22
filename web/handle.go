@@ -31,9 +31,7 @@ func private_msg(w http.ResponseWriter, r *http.Request, u *user) {
 		io.WriteString(w, msg.Msg_id)
 		io.WriteString(w, `"}`)
 	} else {
-		io.WriteString(w, `{msg_id":"`)
-		// io.WriteString(w, msg.Msg_id)
-		io.WriteString(w, `"}`)
+		badReaquest(w, `{Status":"Fail"}`)
 	}
 }
 
@@ -68,7 +66,7 @@ func del_user(w http.ResponseWriter, r *http.Request, uu *user) {
 		io.WriteString(w, u.Id)
 		io.WriteString(w, `"}`)
 	} else {
-		io.WriteString(w, `{Status":"Fail"}`)
+		badReaquest(w, `{Status":"Fail"}`)
 	}
 }
 
@@ -105,7 +103,7 @@ func del_sub(w http.ResponseWriter, r *http.Request, uu *user) {
 		io.WriteString(w, sub.Id)
 		io.WriteString(w, `"}`)
 	} else {
-		io.WriteString(w, `{Status":"Fail"}`)
+		badReaquest(w, `{Status":"Fail"}`)
 	}
 }
 
@@ -120,7 +118,7 @@ func user_sub(w http.ResponseWriter, r *http.Request, uu *user) {
 	// Write the response
 	if err = store.AddUserToSub(sm, uu.ID); err != nil {
 		glog.Errorf("Store the sub_map error:", err)
-		io.WriteString(w, `{Status":"Fail"}`)
+		badReaquest(w, `{Status":"Fail"}`)
 	} else {
 		io.WriteString(w, `{Status":"OK"}`)
 	}
@@ -136,7 +134,7 @@ func rm_user_sub(w http.ResponseWriter, r *http.Request, uu *user) {
 	}
 	if err = store.DelUserFromSub(sm.Sub_id, sm.User_id, uu.ID); err != nil {
 		glog.Errorf("Del the user o error:%v\n", err)
-		io.WriteString(w, `{Status":"Fail"}`)
+		badReaquest(w, `{Status":"Fail"}`)
 	} else {
 		io.WriteString(w, `{Status":"OK"}`)
 	}
@@ -169,9 +167,7 @@ func broadcast(w http.ResponseWriter, r *http.Request, uu *user) {
 		io.WriteString(w, msg.Msg_id)
 		io.WriteString(w, `"}`)
 	} else {
-		io.WriteString(w, `{Status":"Fail"}`)
-		// io.WriteString(w, msg.Msg_id)
-		// io.WriteString(w, `"}`)
+		badReaquest(w, `{Status":"Fail"}`)
 	}
 }
 
@@ -206,6 +202,10 @@ func group_msg(w http.ResponseWriter, r *http.Request, uu *user) {
 		io.WriteString(w, mc.Msg.Msg_id)
 		io.WriteString(w, `"}`)
 	} else {
-		io.WriteString(w, `{Status":"Fail"}`)
+		badReaquest(w, `{Status":"Fail"}`)
 	}
+}
+
+func badReaquest(w http.ResponseWriter, err string) {
+	http.Error(w, err, http.StatusBadRequest)
 }
