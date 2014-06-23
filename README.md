@@ -12,3 +12,6 @@ qk is a simple and power push server
 ### What can qk help you ?
 * quick to set a push system to the mobile phone or destop  
 * quick to set a IM systerm
+
+### Contact me
+http:// yim.so
