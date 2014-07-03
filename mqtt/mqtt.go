@@ -43,16 +43,17 @@ type Pack struct {
 	// Remaining Length
 	length int
 
-	// Variable header
+	// Variable header and playload
+	variable interface{}
+}
+
+type connect struct {
 	protocol         string
 	version          byte
 	keep_alive_timer int
 	return_code      byte
 	topic_name       string
-	conn_flags       connect_flags
-}
 
-type connect_flags struct {
 	user_name     bool
 	password      bool
 	will_retain   bool
@@ -60,6 +61,37 @@ type connect_flags struct {
 	will_flag     bool
 	clean_session bool
 	rserved       bool
+
+	// Playload
+	id         string
+	will_topic string
+	will_msg   string
+	uname      string
+	upassword  string
+}
+
+// Parse the connect flags
+func parse_flags(b byte, flag *connect) {
+	if b>>7 != 0 {
+		flag.user_name = true
+	}
+	if b = b & 127; b>>6 != 0 {
+		flag.password = true
+	}
+	if b = b & 63; b>>5 != 0 {
+		flag.will_retain = true
+	}
+	b = b & 31
+	flag.will_qos = b >> 3
+	if b = b & 7; b>>2 != 0 {
+		flag.will_flag = true
+	}
+	if b = b & 3; b>>1 != 0 {
+		flag.clean_session = true
+	}
+	if b&1 != 0 {
+		flag.rserved = true
+	}
 }
 
 // Read and Write a mqtt pack
@@ -105,10 +137,11 @@ func ReadPack(r *bufio.Reader) (pack *Pack, err error) {
 	switch pack.msg_type {
 	case CONNECT:
 		// Read the protocol name
-		var s string
 		var n int
 		var flags byte
-		s, n, err = readString(r)
+		var conn = new(connect)
+		pack.variable = conn
+		conn.protocol, n, err = readString(r)
 		if err != nil {
 			break
 		}
@@ -116,9 +149,8 @@ func ReadPack(r *bufio.Reader) (pack *Pack, err error) {
 			err = fmt.Errorf("out of range:%v", pack.length-n)
 			break
 		}
-		pack.protocol = s
 		// Read the version
-		pack.version, err = r.ReadByte()
+		conn.version, err = r.ReadByte()
 		if err != nil {
 			break
 		}
@@ -131,36 +163,67 @@ func ReadPack(r *bufio.Reader) (pack *Pack, err error) {
 		if err != nil {
 			break
 		}
-		parse_flags(flags, &pack.conn_flags)
+		parse_flags(flags, conn)
 		// Read the playload
-		playload_len = pack.length - 2 - n - 4
+		playload_len := pack.length - 2 - n - 4
+		// Read the Client Identifier
+		conn.id, n, err = readString(r)
+		if err != nil {
+			break
+		}
+		if n > 23 || n < 1 {
+			err = fmt.Errorf("Identifier Rejected length is:%v", n)
+			conn.return_code = 2
+			break
+		}
+		playload_len -= n
+		if n < 1 && (conn.will_flag || conn.password || n < 0) {
+			err = fmt.Errorf("length error : %v", playload_len)
+			break
+		}
+		if conn.will_flag {
+			// Read the will topic and the will message
+			conn.will_topic, n, err = readString(r)
+			if err != nil {
+				break
+			}
+			playload_len -= n
+			if playload_len < 0 {
+				err = fmt.Errorf("length error : %v", playload_len)
+				break
+			}
+			conn.will_msg, n, err = readString(r)
+			if err != nil {
+				break
+			}
+			playload_len -= n
+		}
+		if conn.user_name && playload_len > 0 {
+			conn.uname, n, err = readString(r)
+			if err != nil {
+				break
+			}
+			playload_len -= n
+			if playload_len < 0 {
+				err = fmt.Errorf("length error : %v", playload_len)
+				break
+			}
+		}
+		if conn.password && playload_len > 0 {
+			conn.upassword, n, err = readString(r)
+			if err != nil {
+				break
+			}
+			playload_len -= n
+			if playload_len < 0 {
+				err = fmt.Errorf("length error : %v", playload_len)
+				break
+			}
+		}
+
 	}
 
 	return
-}
-
-// Parse the connect flags
-func parse_flags(b byte, flag *connect_flags) {
-	if b>>7 != 0 {
-		flag.user_name = true
-	}
-	if b = b & 127; b>>6 != 0 {
-		flag.password = true
-	}
-	if b = b & 63; b>>5 != 0 {
-		flag.will_retain = true
-	}
-	b = b & 31
-	flag.will_qos = b >> 3
-	if b = b & 7; b>>2 != 0 {
-		flag.will_flag = true
-	}
-	if b = b & 3; b>>1 != 0 {
-		flag.clean_session = true
-	}
-	if b&1 != 0 {
-		flag.rserved = true
-	}
 }
 
 func readString(r *bufio.Reader) (s string, nn int, err error) {
