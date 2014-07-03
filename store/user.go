@@ -11,6 +11,7 @@ import (
 	"labix.org/v2/mgo/bson"
 )
 
+// {"id":"","psw":"","owner":""}
 type User struct {
 	Id    string
 	Psw   string
