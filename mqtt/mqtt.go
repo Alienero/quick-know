@@ -48,11 +48,11 @@ type Pack struct {
 }
 
 type connect struct {
-	protocol         string
+	protocol         *string
 	version          byte
 	keep_alive_timer int
 	return_code      byte
-	topic_name       string
+	topic_name       *string
 
 	user_name     bool
 	password      bool
@@ -63,15 +63,15 @@ type connect struct {
 	rserved       bool
 
 	// Playload
-	id         string
-	will_topic string
-	will_msg   string
-	uname      string
-	upassword  string
+	id         *string
+	will_topic *string
+	will_msg   *string
+	uname      *string
+	upassword  *string
 }
 
 type publish struct {
-	topic_name string
+	topic_name *string
 	mid        int
 	msg        []byte
 }
@@ -255,26 +255,19 @@ func ReadPack(r *bufio.Reader) (pack *Pack, err error) {
 	return
 }
 
-func readString(r *bufio.Reader) (s string, nn int, err error) {
-	length := make([]byte, 2)
-	length[0], err = r.ReadByte()
+func readString(r *bufio.Reader) (s *string, nn int, err error) {
+	nn, err = readInt(r, 2)
 	if err != nil {
 		return
 	}
-	length[1], err = r.ReadByte()
-	if err != nil {
-		return
-	}
-	i, n := binary.Varint(length)
-	if n < 1 {
-		err = fmt.Errorf("Get the length error:%v", n)
-	} else {
-		buf := make([]byte, i)
+	if nn > 0 {
+		buf := make([]byte, nn)
 		_, err = io.ReadFull(r, buf)
 		if err == nil {
-			s = string(buf)
-			nn = int(i)
+			*s = string(buf)
 		}
+	} else {
+		*s = ""
 	}
 	return
 }
