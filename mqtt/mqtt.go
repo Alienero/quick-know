@@ -88,7 +88,7 @@ func parse_flags(b byte, flag *connect) {
 		flag.will_retain = true
 	}
 	b = b & 31
-	flag.will_qos = b >> 3
+	flag.will_qos = int(b >> 3)
 	if b = b & 7; b>>2 != 0 {
 		flag.will_flag = true
 	}
@@ -105,9 +105,9 @@ func ReadPack(r *bufio.Reader) (pack *Pack, err error) {
 	// Read the fixed header
 	var (
 		fixed     byte
-		count_len int
 		n         int
-		length    = make([]byte, 4)
+		temp_byte byte
+		count_len = 1
 	)
 	fixed, err = r.ReadByte()
 	if err != nil {
@@ -122,23 +122,22 @@ func ReadPack(r *bufio.Reader) (pack *Pack, err error) {
 	pack.qos_level = fixed >> 1
 	pack.retain = fixed & 1
 	// Get the length of the pack
-	length[count_len], err = r.ReadByte()
+	temp_byte, err = r.ReadByte()
 	if err != nil {
 		return
 	}
-	for length[count_len]>>7 != 0 && count_len < 4 {
-		count_len++
-		length[count_len], err = r.ReadByte()
+
+	// Read the high
+	multiplier := 1
+	for temp_byte>>7 != 0 && count_len < 4 {
+		temp_byte, err = r.ReadByte()
 		if err != nil {
 			return
 		}
+		count_len++
+		pack.length += (int(temp_byte&127) * multiplier)
+		multiplier *= 128
 	}
-	temp, e := binary.Varint(length)
-	if e < 1 {
-		err = fmt.Errorf("Remaining Length error :%v", e)
-		return
-	}
-	pack.length = int(temp)
 	// Read the Variable header and the playload
 	// Check the msg type
 	switch pack.msg_type {
@@ -165,7 +164,7 @@ func ReadPack(r *bufio.Reader) (pack *Pack, err error) {
 			break
 		}
 		// Read the keep alive timer
-		pack.keep_alive_timer, err = readInt(r, 2)
+		conn.keep_alive_timer, err = readInt(r, 2)
 		if err != nil {
 			break
 		}
@@ -274,7 +273,7 @@ func readString(r *bufio.Reader) (s string, nn int, err error) {
 		_, err = io.ReadFull(r, buf)
 		if err == nil {
 			s = string(buf)
-			nn = int64(i)
+			nn = int(i)
 		}
 	}
 	return
@@ -292,4 +291,15 @@ func readInt(r *bufio.Reader, length int) (int, error) {
 	return int(i), nil
 }
 
-func WritePack(pack *Pack, w *bufio.Writer) error {}
+func WritePack(pack *Pack, w *bufio.Writer) (err error) {
+	// Write the fixed header
+
+	return
+}
+func writeString(w *bufio.Writer, s string) error {
+	// Write the length of the string
+	return nil
+}
+func writeInt(w *bufio.Writer, i int) error {
+	return nil
+}
