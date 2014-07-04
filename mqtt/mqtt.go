@@ -70,6 +70,12 @@ type connect struct {
 	upassword  string
 }
 
+type publish struct {
+	topic_name string
+	mid        int
+	msg        []byte
+}
+
 // Parse the connect flags
 func parse_flags(b byte, flag *connect) {
 	if b>>7 != 0 {
@@ -100,6 +106,7 @@ func ReadPack(r *bufio.Reader) (pack *Pack, err error) {
 	var (
 		fixed     byte
 		count_len int
+		n         int
 		length    = make([]byte, 4)
 	)
 	fixed, err = r.ReadByte()
@@ -128,7 +135,7 @@ func ReadPack(r *bufio.Reader) (pack *Pack, err error) {
 	}
 	temp, e := binary.Varint(length)
 	if e < 1 {
-		err = fmt.Errorf("Remaining Length error :&v", e)
+		err = fmt.Errorf("Remaining Length error :%v", e)
 		return
 	}
 	pack.length = int(temp)
@@ -137,7 +144,6 @@ func ReadPack(r *bufio.Reader) (pack *Pack, err error) {
 	switch pack.msg_type {
 	case CONNECT:
 		// Read the protocol name
-		var n int
 		var flags byte
 		var conn = new(connect)
 		pack.variable = conn
@@ -220,7 +226,31 @@ func ReadPack(r *bufio.Reader) (pack *Pack, err error) {
 				break
 			}
 		}
-
+	case PUBLISH:
+		pub := new(publish)
+		pack.variable = pub
+		// Read the topic
+		pub.topic_name, n, err = readString(r)
+		if err != nil {
+			break
+		}
+		vlen := pack.length - n
+		if n < 1 || vlen < 2 {
+			err = fmt.Errorf("length error :%v", vlen)
+			break
+		}
+		// Read the msg id
+		pub.mid, err = readInt(r, 2)
+		if err != nil {
+			break
+		}
+		vlen -= 2
+		// Read the playload
+		pub.msg = make([]byte, vlen)
+		_, err = io.ReadFull(r, pub.msg)
+	case PINGREQ:
+		// Pass
+		// Nothing to do
 	}
 
 	return
