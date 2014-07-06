@@ -129,14 +129,18 @@ func ReadPack(r *bufio.Reader) (pack *Pack, err error) {
 
 	// Read the high
 	multiplier := 1
-	for temp_byte>>7 != 0 && count_len < 4 {
-		temp_byte, err = r.ReadByte()
-		if err != nil {
-			return
-		}
+	for {
 		count_len++
 		pack.length += (int(temp_byte&127) * multiplier)
-		multiplier *= 128
+		if temp_byte>>7 != 0 && count_len < 4 {
+			temp_byte, err = r.ReadByte()
+			if err != nil {
+				return
+			}
+			multiplier *= 128
+		} else {
+			break
+		}
 	}
 	// Read the Variable header and the playload
 	// Check the msg type
@@ -256,6 +260,8 @@ func ReadPack(r *bufio.Reader) (pack *Pack, err error) {
 }
 
 func readString(r *bufio.Reader) (s *string, nn int, err error) {
+	temp_string := ""
+	s = &temp_string
 	nn, err = readInt(r, 2)
 	if err != nil {
 		return
@@ -277,11 +283,7 @@ func readInt(r *bufio.Reader, length int) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	i, n := binary.Varint(buf[:length])
-	if n < 1 {
-		return 0, fmt.Errorf("varint error:%v", n)
-	}
-	return int(i), nil
+	return int(binary.BigEndian.Uint16(buf[:length])), nil
 }
 
 func WritePack(pack *Pack, w *bufio.Writer) (err error) {
