@@ -7,6 +7,7 @@ package mqtt
 import (
 	"bufio"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 )
@@ -291,10 +292,34 @@ func WritePack(pack *Pack, w *bufio.Writer) (err error) {
 
 	return
 }
-func writeString(w *bufio.Writer, s string) error {
+func writeString(w *bufio.Writer, s *string) error {
 	// Write the length of the string
-	return nil
+	if s == nil {
+		return errors.New("nil pointer")
+	}
+	data := []byte(*s)
+	// Write the string length
+	err := writeInt(w, len(data), 2)
+	if err != nil {
+		return err
+	}
+	return writeFull(w, data)
 }
-func writeInt(w *bufio.Writer, i int) error {
-	return nil
+func writeInt(w *bufio.Writer, i, size int) error {
+	b := make([]byte, size)
+	binary.BigEndian.PutUint16(b, uint16(i))
+	return writeFull(w, b)
+}
+
+// wirteFull write the data into the Writer's buffer
+func writeFull(w *bufio.Writer, b []byte) (err error) {
+	hasRead, n := 0, 0
+	for n == len(b) {
+		n, err = w.Write(b[hasRead:])
+		if err != nil {
+			break
+		}
+		hasRead += n
+	}
+	return err
 }
