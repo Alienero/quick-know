@@ -71,6 +71,11 @@ type connect struct {
 	upassword  *string
 }
 
+type connack struct {
+	reserved    byte
+	return_code byte
+}
+
 type publish struct {
 	topic_name *string
 	mid        int
@@ -289,9 +294,47 @@ func readInt(r *bufio.Reader, length int) (int, error) {
 
 func WritePack(pack *Pack, w *bufio.Writer) (err error) {
 	// Write the fixed header
-
+	fixed := make([]byte, 2)
+	// Byte 1
+	fixed[0] = pack.msg_type << 4
+	fixed[0] |= pack.dup_flag << 3
+	fixed[0] |= pack.qos_level << 1
+	// Byte2
+	switch pack.msg_type {
+	case CONNACK:
+		ack := pack.variable.(*connack)
+		fixed = append(fixed, getRemainingLength(2)...)
+		err = writeFull(w, fixed)
+		if err != nil {
+			return
+		}
+		// Write the variable
+		if err = writeFull(w, []byte{ack.reserved, ack.return_code}); err != nil {
+			return
+		}
+	}
+	err = w.Flush()
 	return
 }
+
+func getRemainingLength(length int) []byte {
+	b := make([]byte, 4)
+	count := 0
+	for {
+		digit := length % 128
+		length = length / 128
+		if length > 0 {
+			digit |= 128
+			b[count] = digit
+		} else {
+			b[count] = digit
+			break
+		}
+		count++
+	}
+	return b[:count+1]
+}
+
 func writeString(w *bufio.Writer, s *string) error {
 	// Write the length of the string
 	if s == nil {
