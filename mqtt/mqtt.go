@@ -312,8 +312,8 @@ func WritePack(pack *Pack, w *bufio.Writer) (err error) {
 	var fixed byte
 	// Byte 1
 	fixed = pack.msg_type << 4
-	fixed |= pack.dup_flag << 3
-	fixed |= pack.qos_level << 1
+	fixed |= (pack.dup_flag << 3)
+	fixed |= (pack.qos_level << 1)
 	if err = w.WriteByte(fixed); err != nil {
 		return
 	}
@@ -321,18 +321,19 @@ func WritePack(pack *Pack, w *bufio.Writer) (err error) {
 	switch pack.msg_type {
 	case CONNACK:
 		ack := pack.variable.(*connack)
-		err = writeFull(w, getRemainingLength(2))
-		if err != nil {
+		if err = w.WriteByte(getRemainingLength(2)[0]); err != nil {
 			return
 		}
 		// Write the variable
 		if err = writeFull(w, []byte{ack.reserved, ack.return_code}); err != nil {
 			return
 		}
+		// w.WriteByte(ack.reserved)
+		// w.WriteByte(ack.return_code)
 	case PUBLISH:
 		// Publish the msg to the client
 		pub := pack.variable.(*publish)
-		if err = writeFull(w, getRemainingLength(4+len([]byte(*pub.topic_name)))); err != nil {
+		if err = writeFull(w, getRemainingLength(4+len([]byte(*pub.topic_name))+len(pub.msg))); err != nil {
 			return
 		}
 		if err = writeString(w, pub.topic_name); err != nil {
@@ -389,7 +390,7 @@ func writeInt(w *bufio.Writer, i, size int) error {
 // wirteFull write the data into the Writer's buffer
 func writeFull(w *bufio.Writer, b []byte) (err error) {
 	hasRead, n := 0, 0
-	for n == len(b) {
+	for n < len(b) {
 		n, err = w.Write(b[hasRead:])
 		if err != nil {
 			break
