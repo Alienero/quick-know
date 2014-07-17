@@ -82,6 +82,10 @@ type publish struct {
 	msg        []byte
 }
 
+type puback struct {
+	mid int
+}
+
 // Parse the connect flags
 func parse_flags(b byte, flag *connect) {
 	if b>>7 != 0 {
@@ -257,6 +261,17 @@ func ReadPack(r *bufio.Reader) (pack *Pack, err error) {
 		// Read the playload
 		pub.msg = make([]byte, vlen)
 		_, err = io.ReadFull(r, pub.msg)
+	case PUBACK:
+		if pack.length == 2 {
+			ack := new(puback)
+			ack.mid, err = readInt(r, 2)
+			if err != nil {
+				break
+			}
+			pack.variable = ack
+		} else {
+			err = fmt.Errorf("Pack(%v) length(%v) != 2", pack.msg_type, pack.length)
+		}
 	case PINGREQ:
 		// Pass
 		// Nothing to do
@@ -294,22 +309,39 @@ func readInt(r *bufio.Reader, length int) (int, error) {
 
 func WritePack(pack *Pack, w *bufio.Writer) (err error) {
 	// Write the fixed header
-	fixed := make([]byte, 2)
+	var fixed byte
 	// Byte 1
-	fixed[0] = pack.msg_type << 4
-	fixed[0] |= pack.dup_flag << 3
-	fixed[0] |= pack.qos_level << 1
+	fixed = pack.msg_type << 4
+	fixed |= pack.dup_flag << 3
+	fixed |= pack.qos_level << 1
+	if err = w.WriteByte(fixed); err != nil {
+		return
+	}
 	// Byte2
 	switch pack.msg_type {
 	case CONNACK:
 		ack := pack.variable.(*connack)
-		fixed = append(fixed, getRemainingLength(2)...)
-		err = writeFull(w, fixed)
+		err = writeFull(w, getRemainingLength(2))
 		if err != nil {
 			return
 		}
 		// Write the variable
 		if err = writeFull(w, []byte{ack.reserved, ack.return_code}); err != nil {
+			return
+		}
+	case PUBLISH:
+		// Publish the msg to the client
+		pub := pack.variable.(*publish)
+		if err = writeFull(w, getRemainingLength(4+len([]byte(*pub.topic_name)))); err != nil {
+			return
+		}
+		if err = writeString(w, pub.topic_name); err != nil {
+			return
+		}
+		if err = writeInt(w, pub.mid, 2); err != nil {
+			return
+		}
+		if err = writeFull(w, pub.msg); err != nil {
 			return
 		}
 	}
@@ -325,9 +357,9 @@ func getRemainingLength(length int) []byte {
 		length = length / 128
 		if length > 0 {
 			digit |= 128
-			b[count] = digit
+			b[count] = byte(digit)
 		} else {
-			b[count] = digit
+			b[count] = byte(digit)
 			break
 		}
 		count++
