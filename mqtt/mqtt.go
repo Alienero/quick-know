@@ -35,6 +35,8 @@ const (
 	DISCONNECT
 )
 
+var null_string = ""
+
 type Pack struct {
 	// Fixed header
 	msg_type  byte
@@ -53,7 +55,7 @@ type connect struct {
 	version          byte
 	keep_alive_timer int
 	return_code      byte
-	topic_name       *string
+	// topic_name       *string
 
 	user_name     bool
 	password      bool
@@ -71,9 +73,46 @@ type connect struct {
 	upassword  *string
 }
 
+func (c *connect) GetUserName() (user *string, psw *string) {
+	if !c.user_name {
+		user = &null_string
+	} else {
+		user = c.uname
+	}
+	if !c.password {
+		psw = &null_string
+	} else {
+		psw = c.upassword
+	}
+	return
+}
+
+func (c *connect) GetWillMsg() (bool, *string, *string) {
+	if !c.will_flag {
+		return false, &null_string, &null_string
+	}
+	return true, c.will_topic, c.will_msg
+}
+
+func (c *connect) GetReturnCode() byte {
+	return c.return_code
+}
+
+func (c *connect) GetKeepAlive() int {
+	return c.keep_alive_timer
+}
+
+func (c *connect) IsCleanSession() bool {
+	return c.clean_session
+}
+
 type connack struct {
 	reserved    byte
 	return_code byte
+}
+
+func (c *connack) GetReturnCode() byte {
+	return c.return_code
 }
 
 type publish struct {
@@ -82,8 +121,31 @@ type publish struct {
 	msg        []byte
 }
 
+func (pub *publish) GetTopic() *string {
+	return pub.topic_name
+}
+func (pub *publish) SetTopic(topic *string) {
+	pub.topic_name = topic
+}
+func (pub *publish) GetMid() int {
+	return pub.mid
+}
+func (pub *publish) SetMid(id int) {
+	pub.mid = id
+}
+func (pub *publish) GetMsg() []byte {
+	return pub.msg
+}
+func (pub *publish) SetMsg(msg []byte) {
+	pub.msg = msg
+}
+
 type puback struct {
 	mid int
+}
+
+func (ack *puback) SetMid(id int) {
+	ack.mid = id
 }
 
 // Parse the connect flags
@@ -275,6 +337,8 @@ func ReadPack(r *bufio.Reader) (pack *Pack, err error) {
 	case PINGREQ:
 		// Pass
 		// Nothing to do
+	case DISCONNECT:
+		// Pass, nothing to do.
 	}
 
 	return
@@ -328,8 +392,6 @@ func WritePack(pack *Pack, w *bufio.Writer) (err error) {
 		if err = writeFull(w, []byte{ack.reserved, ack.return_code}); err != nil {
 			return
 		}
-		// w.WriteByte(ack.reserved)
-		// w.WriteByte(ack.return_code)
 	case PUBLISH:
 		// Publish the msg to the client
 		pub := pack.variable.(*publish)
