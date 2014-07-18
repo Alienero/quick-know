@@ -24,7 +24,7 @@ func TestConnet(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Check the pack
-	c := pack.variable.(*connect)
+	c := pack.variable.(*Connect)
 	fmt.Println(*c.uname)
 	fmt.Println(*c.upassword)
 	fmt.Println(*c.id)
@@ -33,7 +33,7 @@ func TestConnet(t *testing.T) {
 	pack = new(Pack)
 	pack.msg_type = CONNACK
 
-	ack := new(connack)
+	ack := new(Connack)
 	ack.return_code = 0
 	pack.variable = ack
 
@@ -46,7 +46,7 @@ func TestConnet(t *testing.T) {
 	pack.qos_level = 1
 	pack.dup_flag = 0
 	pack.msg_type = PUBLISH
-	pub := new(publish)
+	pub := new(Publish)
 	pub.mid = 1
 	s := "jcode/a"
 	pub.topic_name = &s

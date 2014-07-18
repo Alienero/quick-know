@@ -50,12 +50,30 @@ type Pack struct {
 	variable interface{}
 }
 
-type connect struct {
+func (pack *Pack) GetType() byte {
+	return pack.msg_type
+}
+func (pack *Pack) SetType(typ byte) {
+	pack.msg_type = typ
+}
+func (pack *Pack) GetDup() byte {
+	return pack.dup_flag
+}
+func (pack *Pack) SetDup(dup byte) {
+	pack.dup_flag = dup
+}
+func (pack *Pack) GetQos() byte {
+	return pack.qos_level
+}
+func (pack *Pack) SetQos(qos byte) {
+	pack.qos_level = qos
+}
+
+type Connect struct {
 	protocol         *string
 	version          byte
 	keep_alive_timer int
 	return_code      byte
-	// topic_name       *string
 
 	user_name     bool
 	password      bool
@@ -73,7 +91,7 @@ type connect struct {
 	upassword  *string
 }
 
-func (c *connect) GetUserName() (user *string, psw *string) {
+func (c *Connect) GetUserName() (user *string, psw *string) {
 	if !c.user_name {
 		user = &null_string
 	} else {
@@ -87,69 +105,72 @@ func (c *connect) GetUserName() (user *string, psw *string) {
 	return
 }
 
-func (c *connect) GetWillMsg() (bool, *string, *string) {
+func (c *Connect) GetWillMsg() (bool, *string, *string) {
 	if !c.will_flag {
 		return false, &null_string, &null_string
 	}
 	return true, c.will_topic, c.will_msg
 }
 
-func (c *connect) GetReturnCode() byte {
+func (c *Connect) GetReturnCode() byte {
 	return c.return_code
 }
 
-func (c *connect) GetKeepAlive() int {
+func (c *Connect) GetKeepAlive() int {
 	return c.keep_alive_timer
 }
 
-func (c *connect) IsCleanSession() bool {
+func (c *Connect) IsCleanSession() bool {
 	return c.clean_session
 }
 
-type connack struct {
+type Connack struct {
 	reserved    byte
 	return_code byte
 }
 
-func (c *connack) GetReturnCode() byte {
+func (c *Connack) GetReturnCode() byte {
 	return c.return_code
 }
+func (c *Connack) SetReturnCode(return_code byte) {
+	c.return_code = return_code
+}
 
-type publish struct {
+type Publish struct {
 	topic_name *string
 	mid        int
 	msg        []byte
 }
 
-func (pub *publish) GetTopic() *string {
+func (pub *Publish) GetTopic() *string {
 	return pub.topic_name
 }
-func (pub *publish) SetTopic(topic *string) {
+func (pub *Publish) SetTopic(topic *string) {
 	pub.topic_name = topic
 }
-func (pub *publish) GetMid() int {
+func (pub *Publish) GetMid() int {
 	return pub.mid
 }
-func (pub *publish) SetMid(id int) {
+func (pub *Publish) SetMid(id int) {
 	pub.mid = id
 }
-func (pub *publish) GetMsg() []byte {
+func (pub *Publish) GetMsg() []byte {
 	return pub.msg
 }
-func (pub *publish) SetMsg(msg []byte) {
+func (pub *Publish) SetMsg(msg []byte) {
 	pub.msg = msg
 }
 
-type puback struct {
+type Puback struct {
 	mid int
 }
 
-func (ack *puback) SetMid(id int) {
+func (ack *Puback) SetMid(id int) {
 	ack.mid = id
 }
 
 // Parse the connect flags
-func parse_flags(b byte, flag *connect) {
+func parse_flags(b byte, flag *Connect) {
 	if b>>7 != 0 {
 		flag.user_name = true
 	}
@@ -220,7 +241,7 @@ func ReadPack(r *bufio.Reader) (pack *Pack, err error) {
 	case CONNECT:
 		// Read the protocol name
 		var flags byte
-		var conn = new(connect)
+		var conn = new(Connect)
 		pack.variable = conn
 		conn.protocol, n, err = readString(r)
 		if err != nil {
@@ -302,7 +323,7 @@ func ReadPack(r *bufio.Reader) (pack *Pack, err error) {
 			}
 		}
 	case PUBLISH:
-		pub := new(publish)
+		pub := new(Publish)
 		pack.variable = pub
 		// Read the topic
 		pub.topic_name, n, err = readString(r)
@@ -325,7 +346,7 @@ func ReadPack(r *bufio.Reader) (pack *Pack, err error) {
 		_, err = io.ReadFull(r, pub.msg)
 	case PUBACK:
 		if pack.length == 2 {
-			ack := new(puback)
+			ack := new(Puback)
 			ack.mid, err = readInt(r, 2)
 			if err != nil {
 				break
@@ -384,7 +405,7 @@ func WritePack(pack *Pack, w *bufio.Writer) (err error) {
 	// Byte2
 	switch pack.msg_type {
 	case CONNACK:
-		ack := pack.variable.(*connack)
+		ack := pack.variable.(*Connack)
 		if err = w.WriteByte(getRemainingLength(2)[0]); err != nil {
 			return
 		}
@@ -394,7 +415,7 @@ func WritePack(pack *Pack, w *bufio.Writer) (err error) {
 		}
 	case PUBLISH:
 		// Publish the msg to the client
-		pub := pack.variable.(*publish)
+		pub := pack.variable.(*Publish)
 		if err = writeFull(w, getRemainingLength(4+len([]byte(*pub.topic_name))+len(pub.msg))); err != nil {
 			return
 		}
@@ -460,4 +481,31 @@ func writeFull(w *bufio.Writer, b []byte) (err error) {
 		hasRead += n
 	}
 	return err
+}
+
+// Pack setters
+
+// Get a connection ack pack
+func GetConnAckPack(return_code byte) *Pack {
+	pack := new(Pack)
+	pack.SetType(CONNACK)
+	ack := new(Connack)
+	pack.variable = ack
+	ack.SetReturnCode(return_code)
+	return pack
+}
+
+// Get a publis pack
+func GetPubPack(qos byte, dup byte, mid int, topic *string, msg []byte) *Pack {
+	pack := new(Pack)
+	pack.SetQos(qos)
+	pack.SetDup(dup)
+	pack.SetType(PUBLISH)
+
+	pub := new(Publish)
+	pub.SetMid(mid)
+	pub.SetTopic(topic)
+	pub.SetMsg(msg)
+	pack.variable = pub
+	return pack
 }
