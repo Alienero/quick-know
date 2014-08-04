@@ -5,9 +5,11 @@
 package comet
 
 import (
+	"bufio"
 	"fmt"
 
-	"github.com/Alienero/spp"
+	// "github.com/Alienero/spp"
+	"github.com/Alienero/quick-know/mqtt"
 )
 
 // Tcp write queue
@@ -17,21 +19,29 @@ type PackQueue struct {
 	// Notice read the error
 	errorChan chan error
 
-	writeChan chan *spp.Pack
+	writeChan chan *pakcAdnType
 	readChan  chan *packAndErr
 	// Pack connection
-	rw *spp.Conn
+	r *bufio.Reader
+	w *bufio.Writer
 }
 type packAndErr struct {
-	pack *spp.Pack
+	pack *mqtt.Pack
 	err  error
 }
 
+// 1 is delay, 0 is no delay, 2 is just flush.
+type pakcAdnType struct {
+	pack *mqtt.Pack
+	typ  byte
+}
+
 // Init a pack queue
-func NewPackQueue(rw *spp.Conn) *PackQueue {
+func NewPackQueue(r *bufio.Reader, w *bufio.Writer) *PackQueue {
 	return &PackQueue{
-		rw:        rw,
-		writeChan: make(chan *spp.Pack, Conf.WirteLoopChanNum),
+		r:         r,
+		w:         w,
+		writeChan: make(chan *pakcAdnType, Conf.WirteLoopChanNum),
 		readChan:  make(chan *packAndErr, 1),
 		errorChan: make(chan error, 1),
 	}
@@ -45,13 +55,22 @@ func (queue *PackQueue) writeLoop() {
 loop:
 	for {
 		select {
-		case pack := <-queue.writeChan:
-			if pack == nil {
+		case pt := <-queue.writeChan:
+			if pt == nil {
 				break loop
 			}
-			err = queue.rw.WritePack(pack)
+
+			switch pt.typ {
+			case 0:
+				err = mqtt.WritePack(pack, queue.w)
+			case 1:
+				err = mqtt.DelayWritePack(pack, queue.w)
+			case 2:
+				err = queue.w.Flush()
+			}
+
 			if err != nil {
-				// Tell listen error
+				// Tell listener the error
 				queue.writeError = err
 				break loop
 			}
@@ -64,16 +83,35 @@ loop:
 }
 
 // Write a pack , and get the last error
-func (queue *PackQueue) WritePack(pack *spp.Pack) error {
+func (queue *PackQueue) WritePack(pack *mqtt.Pack) error {
 	if queue.writeError != nil {
 		return queue.writeError
 	}
-	queue.writeChan <- pack
+	queue.writeChan <- &pakcAdnType{pack: pack}
+	return nil
+}
+
+func (queue *PackQueue) WriteDelayPack(pack *mqtt.Pack) error {
+	if queue.writeError != nil {
+		return queue.writeError
+	}
+	queue.writeChan <- &pakcAdnType{
+		pack: pack,
+		typ:  1,
+	}
+	return nil
+}
+
+func (queue *PackQueue) Flush() error {
+	if queue.writeError != nil {
+		return queue.writeError
+	}
+	queue.writeChan <- &pakcAdnType{typ: 2}
 	return nil
 }
 
 // Read a pack and retuen the write queue error
-func (queue *PackQueue) ReadPack() (pack *spp.Pack, err error) {
+func (queue *PackQueue) ReadPack() (pack *mqtt.Pack, err error) {
 	go func() {
 		p := new(packAndErr)
 		p.pack, p.err = queue.rw.ReadPack()
@@ -99,7 +137,7 @@ func (queue *PackQueue) ReadPackInLoop(fin <-chan byte) <-chan *packAndErr {
 		p := new(packAndErr)
 	loop:
 		for {
-			p.pack, p.err = queue.rw.ReadPack()
+			p.pack, p.err = mqtt.ReadPack(queue.r)
 			select {
 			case ch <- p:
 				// Without anything to do

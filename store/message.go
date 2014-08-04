@@ -12,11 +12,13 @@ import (
 )
 
 type Msg struct {
-	Msg_id string // Msg ID
+	Msg_id int    // Msg ID
 	Owner  string // Owner
-	To_id  string
+	To_id  string // Topic
 	Body   []byte
 	Typ    int
+
+	Dup byte // mqtt dup
 
 	Expired int64
 }
@@ -68,7 +70,7 @@ func GetOfflineMsg(id string, fin <-chan byte) (<-chan *Msg, <-chan byte) {
 }
 
 // Del the offile msg
-func DelOfflineMsg(msg_id string, id string) {
+func DelOfflineMsg(msg_id int, id string) {
 	c := sei_msg.DB(Config.MsgName).C(Config.OfflineName)
 	defer sei_msg.Refresh()
 	err := c.Remove(bson.M{"msg_id": msg_id, "to_id": id})

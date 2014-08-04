@@ -5,6 +5,7 @@
 package comet
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"net"
@@ -12,7 +13,8 @@ import (
 	"time"
 
 	"github.com/Alienero/quick-know/store"
-	"github.com/Alienero/spp"
+	// "github.com/Alienero/spp"
+	"github.com/Alienero/quick-know/mqtt"
 
 	"github.com/golang/glog"
 )
@@ -48,6 +50,8 @@ func startListen(typ int, addr string) error {
 type conn struct {
 	// net's Connection
 	rw net.Conn
+	r  *bufio.Reader
+	w  *bufio.Writer
 	// The conn's listen type
 	typ int
 }
@@ -55,6 +59,8 @@ type conn struct {
 func newConn(rw net.Conn, typ int) *conn {
 	return &conn{
 		rw:  rw,
+		r:   bufio.NewReader(rw),
+		w:   bufio.NewWriter(rw),
 		typ: typ,
 	}
 }
@@ -76,17 +82,18 @@ func (c *conn) serve() {
 		glog.Errorf("conn.SetKeepAlive() error(%v)\n", err)
 		return
 	}
-	// if err = tcp.SetReadDeadline(time.Second * Conf.ReadTimeout); err != nil {
-	// 	glog.Errorf("conn.SetReadDeadline() error(%v)\n", err)
-	// 	return
-	// }
-	// if err = tcp.SetWriteDeadline(time.Second * Conf.WriteTimeout); err != nil {
-	// 	glog.Errorf("conn.SetWriteDeadline() error(%v)\n", err)
-	// 	return
-	// }
-	packRW := spp.NewConn(tcp)
-	packRW.SetWriteDeadline(time.Duration(Conf.WriteTimeout) * time.Second)
-	packRW.SetReadDeadline(time.Duration(Conf.ReadTimeout) * time.Second)
+	if err = tcp.SetReadDeadline(time.Second * Conf.ReadTimeout); err != nil {
+		glog.Errorf("conn.SetReadDeadline() error(%v)\n", err)
+		return
+	}
+	if err = tcp.SetWriteDeadline(time.Second * Conf.WriteTimeout); err != nil {
+		glog.Errorf("conn.SetWriteDeadline() error(%v)\n", err)
+		return
+	}
+
+	// packRW := spp.NewConn(tcp)
+	// packRW.SetWriteDeadline(time.Duration(Conf.WriteTimeout) * time.Second)
+	// packRW.SetReadDeadline(time.Duration(Conf.ReadTimeout) * time.Second)
 	var l listener
 	if l, err = login(packRW, c.typ); err != nil {
 		glog.Errorf("Login error :%v\n", err)
@@ -104,36 +111,33 @@ func (c *conn) serve() {
 	l.listen_loop()
 }
 
-func login(rw *spp.Conn, typ int) (l listener, err error) {
-	var pack *spp.Pack
-	pack, err = rw.ReadPack()
+func login(r *bufio.Reader, typ int) (l listener, err error) {
+	var pack *mqtt.Pack
+	pack, err = mqtt.ReadPack(r)
 	if err != nil {
 		glog.Error("Read login pack error")
 		return
 	}
-	if pack.Typ != LOGIN {
+	if pack.GetType() != mqtt.CONNECT {
 		err = fmt.Errorf("Recive login pack's type error:%v \n", pack.Typ)
 		return
 	}
-	// Marshal Json
-	var req *loginRequst
-	req, err = getLoginRequst(pack.Body)
-	if err != nil {
-		glog.Error("Read login request error")
+	info, ok := (pack.GetVariable()).(*mqtt.Connect)
+	if !ok {
+		err = errors.New("It's not a mqtt connection package.")
 		return
 	}
-	if req.Typ != typ {
-		return nil, fmt.Errorf("request type error:%v", req.Typ)
-	}
+	id := info.GetUserName()
+	psw := info.GetPassword()
 
-	switch req.Typ {
+	switch typ {
 	case CLIENT:
-		if !store.Client_login(req.Id, req.Psw, req.Owner) {
-			err = fmt.Errorf("Client Authentication is not passed id:%v,psw:%v,owner:%v", req.Id, req.Psw, req.Owner)
+		if !store.Client_login(*id, *psw) {
+			err = fmt.Errorf("Client Authentication is not passed id:%v,psw:%v", *id, *psw)
 			break
 		}
 		// Has been already logon
-		if tc := Users.Get(req.Id); tc != nil {
+		if tc := Users.Get(*id); tc != nil {
 			tc.lock.Lock()
 			if !tc.isLetClose {
 				tc.lock.Unlock()
@@ -158,16 +162,16 @@ func login(rw *spp.Conn, typ int) (l listener, err error) {
 		l = c
 	case CSERVER:
 		// TODO : Base64
-		if !store.Ctrl_login_alive(req.Id, req.Psw) {
-			err = fmt.Errorf("Client Authentication is not passed id:%v,psw:%v", req.Id, req.Psw)
+		if !store.Ctrl_login_alive() {
+			err = fmt.Errorf("Client Authentication is not passed id:%v,psw:%v", *id, *psw)
 			break
 		}
 		// TODO limit ctrl server users
 		cs := newCServer(rw, req.Id)
-		ctrls.Set(req.Id, cs)
+		ctrls.Set(*id, cs)
 		l = cs
 	default:
-		fmt.Errorf("No such pack type :%v", pack.Typ)
+		fmt.Errorf("No such pack type :%v", typ)
 	}
 	return
 }

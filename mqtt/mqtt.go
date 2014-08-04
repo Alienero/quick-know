@@ -50,6 +50,9 @@ type Pack struct {
 	variable interface{}
 }
 
+func (pack *Pack) GetVariable() interface{} {
+	return pack.variable
+}
 func (pack *Pack) GetType() byte {
 	return pack.msg_type
 }
@@ -91,18 +94,20 @@ type Connect struct {
 	upassword  *string
 }
 
-func (c *Connect) GetUserName() (user *string, psw *string) {
+func (c *Connect) GetUserName() *string {
 	if !c.user_name {
-		user = &null_string
+		return &null_string
 	} else {
-		user = c.uname
+		return c.uname
 	}
+}
+
+func (c *Connect) GetPassword() *string {
 	if !c.password {
-		psw = &null_string
+		return &null_string
 	} else {
-		psw = c.upassword
+		return c.upassword
 	}
-	return
 }
 
 func (c *Connect) GetWillMsg() (bool, *string, *string) {
@@ -167,6 +172,9 @@ type Puback struct {
 
 func (ack *Puback) SetMid(id int) {
 	ack.mid = id
+}
+func (ack *Puback) GetMid() int {
+	return ack.mid
 }
 
 // Parse the connect flags
@@ -392,7 +400,14 @@ func readInt(r *bufio.Reader, length int) (int, error) {
 	return int(binary.BigEndian.Uint16(buf[:length])), nil
 }
 
-func WritePack(pack *Pack, w *bufio.Writer) (err error) {
+func WritePack(pack *Pack, w *bufio.Writer) error {
+	if err := DelayWritePack(pack, w); err != nil {
+		return err
+	}
+	return w.Flush()
+}
+
+func DelayWritePack(pack *Pack, w *bufio.Writer) (err error) {
 	// Write the fixed header
 	var fixed byte
 	// Byte 1
@@ -428,8 +443,9 @@ func WritePack(pack *Pack, w *bufio.Writer) (err error) {
 		if err = writeFull(w, pub.msg); err != nil {
 			return
 		}
+	case PINGRESP:
+		err = w.WriteByte(0)
 	}
-	err = w.Flush()
 	return
 }
 
@@ -507,5 +523,14 @@ func GetPubPack(qos byte, dup byte, mid int, topic *string, msg []byte) *Pack {
 	pub.SetTopic(topic)
 	pub.SetMsg(msg)
 	pack.variable = pub
+	return pack
+}
+
+// Get a request for ping pack
+func GetPingRespPack(qos byte, dup byte) *Pack {
+	pack := new(Pack)
+	pack.SetQos(qos)
+	pack.SetDup(dup)
+	pack.SetType(PINGRESP)
 	return pack
 }

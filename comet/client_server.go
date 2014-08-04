@@ -5,13 +5,15 @@
 package comet
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"sync"
 	"time"
 
 	"github.com/Alienero/quick-know/store"
-	"github.com/Alienero/spp"
+	// "github.com/Alienero/spp"
+	"github.com/Alienero/quick-know/mqtt"
 
 	"github.com/golang/glog"
 )
@@ -26,8 +28,8 @@ type client struct {
 	onlines  chan *store.Msg
 	readChan <-chan *packAndErr
 
-	onlineCache  map[string]*store.Msg
-	offlineCache []*user_msg
+	onlineCache map[int]*store.Msg
+	offlineNum  int
 
 	CloseChan   chan byte // Other gorountine Call notice exit
 	isSendClose bool
@@ -40,9 +42,9 @@ type client struct {
 	isOfflineClose bool // Is offline chan has been close
 }
 
-func newClient(rw *spp.Conn, id string) *client {
+func newClient(r *bufio.Reader, w *bufio.Writer, id string) *client {
 	return &client{
-		queue:     NewPackQueue(rw),
+		queue:     NewPackQueue(r, w),
 		id:        id,
 		CloseChan: make(chan byte),
 		lock:      new(sync.Mutex),
@@ -50,8 +52,7 @@ func newClient(rw *spp.Conn, id string) *client {
 		offlines: make(chan *store.Msg, Conf.MaxCacheMsg),
 		onlines:  make(chan *store.Msg, Conf.MaxCacheMsg),
 
-		onlineCache: make(map[string]*store.Msg),
-		// offlineCache: make([]*user_msg, 1),
+		onlineCache: make(map[int]*store.Msg),
 	}
 }
 
@@ -62,7 +63,7 @@ func (c *client) listen_loop() (e error) {
 		err     error
 		msg     *store.Msg
 		pAndErr *packAndErr
-		pack    *spp.Pack
+		pack    *mqtt.Pack
 
 		noticeFin = make(chan byte)
 
@@ -127,35 +128,23 @@ loop:
 				err = pAndErr.err
 				break loop
 			}
-			glog.Infof("Client msg(%v)\n", pAndErr.pack.Typ)
+			glog.Infof("Client msg(%v)\n", pAndErr.pack.GetType())
 
 			// Choose the requst type
-			switch pAndErr.pack.Typ {
-			case SINGEL:
-				sg := new(singleMsg)
-				if err = unMarshalJson(pAndErr.pack.Body, sg); err != nil {
-					glog.Errorf("Marshal a json error:%v", err)
-					break
-				}
-				c.delMsg(sg.Typ, sg.Id)
-			case MUTIL:
-				mutil := new(mutilMsg)
-				if err = unMarshalJson(pAndErr.pack.Body, mutil); err != nil {
-					glog.Errorf("Marshal a json error:%v", err)
-					break
-				}
-				for _, sg := range mutil.Msgs {
-					c.delMsg(sg.Typ, sg.Id)
+			switch pAndErr.pack.GetType() {
+			case mqtt.PUBACK:
+				ack := pack.GetVariable().(*mqtt.Puback)
+				if ack.GetMid() > 65535 {
+					c.delMsg(OFFLINE, ack.GetMid())
+				} else {
+					// Online msg
+					c.delMsg(ONLINE, ack.GetMid())
 				}
 
-			case HEART_BEAT:
+			case mqtt.PINGREQ:
 				// Reply the heart beat
 				glog.Info("hb msg")
-				pack, err = c.setPack(HEART_BEAT, []byte("OK"))
-				if err != nil {
-					break loop
-				}
-				err = c.queue.WritePack(pack)
+				err = c.queue.WritePack(mqtt.GetPingRespPack(1, msg.Dup))
 				if err != nil {
 					break loop
 				}
@@ -198,23 +187,17 @@ loop:
 
 	return
 }
-func (c *client) pushMsg(msg *store.Msg) (err error) {
-	var buf []byte
-	buf, err = getMsg(msg)
+func (c *client) pushMsg(msg *store.Msg) error {
+	pack, err := mqtt.GetPubPack(1, msg.Dup, msg.Msg_id, msg.To_id, msg.Body)
 	if err != nil {
-		return
-	}
-	// Set a pack
-	pack, err := c.setPack(PUSH_MSG, buf)
-	if err != nil {
-		return
+		return err
 	}
 	// Write this pack
 	err = c.queue.WritePack(pack)
-	return
+	return err
 }
 
-func (c *client) delMsg(typ int, msg_id string) {
+func (c *client) delMsg(typ int, msg_id int) {
 	switch typ {
 	case OFFLINE:
 		// Del the offline msg in the store
@@ -223,53 +206,32 @@ func (c *client) delMsg(typ int, msg_id string) {
 	case ONLINE:
 		// Del the online msg in the msg cache
 		glog.Info("Del a online msg")
-		delete(c.onlineCache, c.id)
+		delete(c.onlineCache, msg_id)
 	default:
 		glog.Errorf("No define the type:%v", typ)
 	}
 }
 
-// func pushMsgs(msg []*store.Msg) (err error) {
-// }
 func (c *client) pushOfflineMsg(msg *store.Msg) (err error) {
 	// The max cache size is 20
 	if c.isOfflineClose && msg == nil {
 		// Send
-		err = c.sendOfflineMsg(&offineMsg{
-			Ms: c.offlineCache,
-		})
+		err = c.queue.Flush()
 	} else {
 		// Wait
-		if len(c.offlineCache) > 20 {
+		if c.offlineNum > 20 {
 			// Send
-			err = c.sendOfflineMsg(&offineMsg{
-				Ms: c.offlineCache,
-			})
+			pack, _ := mqtt.GetPubPack(1, msg.Dup, msg.Msg_id, msg.To_id, msg.Body)
+			err = c.queue.WritePack(pack)
 			// Clean the cache
-			c.offlineCache = []*user_msg{getUserMsg(msg)}
+			c.offlineNum = 0
 		} else {
-			c.offlineCache = append(c.offlineCache, getUserMsg(msg))
+			c.offlineNum++
+			pack, _ := mqtt.GetPubPack(1, msg.Dup, msg.Msg_id, msg.To_id, msg.Body)
+			err = c.queue.WriteDelayPack(pack)
 		}
 	}
 	return
-}
-func (c *client) sendOfflineMsg(ms *offineMsg) (err error) {
-	var buf []byte
-	buf, err = getOffineMsg(ms)
-	if err != nil {
-		return
-	}
-	// Set a pack
-	pack, err := c.setPack(PUSH_OFFLINE, buf)
-	if err != nil {
-		return
-	}
-	// Write this pack
-	err = c.queue.WritePack(pack)
-	return
-}
-func (c *client) setPack(typ int, body []byte) (*spp.Pack, error) {
-	return c.queue.rw.SetDefaultPack(typ, body)
 }
 
 func WriteOnlineMsg(msg *store.Msg) {

@@ -47,7 +47,7 @@ func TestLogin(t *testing.T) {
 }
 
 func TestCtrlLogin(t *testing.T) {
-	if b, id := Ctrl_login("10086"); !b || id != "1234" {
+	if b, id := Ctrl_login("10086", "1234"); !b || id != "1234" {
 		t.Errorf("Error login")
 	}
 }
@@ -56,7 +56,7 @@ func TestCtrlLogin(t *testing.T) {
 func TestInsertMsg(t *testing.T) {
 	// TODO To_id belong
 	InsertOfflineMsg(&Msg{
-		Msg_id: "10081",
+		Msg_id: 10081,
 		Owner:  "1234",
 		To_id:  "1001",
 		Body:   []byte("Hello word!"),
@@ -65,7 +65,7 @@ func TestInsertMsg(t *testing.T) {
 
 func TestDelMsg(t *testing.T) {
 	// TODO To_id belong
-	DelOfflineMsg("10081", "1001")
+	DelOfflineMsg(10081, "1001")
 }
 
 func TestIsUserExist(t *testing.T) {
