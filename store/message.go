@@ -14,7 +14,8 @@ import (
 type Msg struct {
 	Msg_id int    // Msg ID
 	Owner  string // Owner
-	To_id  string // Topic
+	To_id  string
+	Topic  string
 	Body   []byte
 	Typ    int
 
@@ -23,6 +24,7 @@ type Msg struct {
 	Expired int64
 }
 
+// id is to_id (client id)
 func GetOfflineMsg(id string, fin <-chan byte) (<-chan *Msg, <-chan byte) {
 	// defer recover()
 	// Find in the db
@@ -67,6 +69,16 @@ func GetOfflineMsg(id string, fin <-chan byte) (<-chan *Msg, <-chan byte) {
 		close(ch2)
 	}()
 	return ch, ch2
+}
+
+func GetOfflineCount(id string) (int, error) {
+	c := sei_msg.DB(Config.MsgName).C(Config.OfflineName)
+	defer sei_msg.Refresh()
+	msg := new(Msg)
+	if err := c.Find(bson.M{"to_id": id}).Sort("msg_id", "-1").One(&msg); err != nil {
+		return 0, err
+	}
+	return msg.Msg_id, nil
 }
 
 // Del the offile msg
