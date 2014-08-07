@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"net"
 	"sync"
 	"time"
 
@@ -51,9 +52,9 @@ type client struct {
 	n            int
 }
 
-func newClient(r *bufio.Reader, w *bufio.Writer, id string) *client {
+func newClient(r *bufio.Reader, w *bufio.Writer, conn net.Conn, id string) *client {
 	return &client{
-		queue:     NewPackQueue(r, w),
+		queue:     NewPackQueue(r, w, conn),
 		id:        id,
 		CloseChan: make(chan byte),
 		lock:      new(sync.Mutex),

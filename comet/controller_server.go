@@ -26,30 +26,30 @@ func addHandle(typ int, f handle) {
 
 // Control server
 type ControlServer struct {
-	queue *PackQueue
-	id    string
+	// queue *PackQueue
+	id string
 }
 
 func newCServer(rw *spp.Conn, id string) *ControlServer {
 	return &ControlServer{
-		queue: NewPackQueue(rw),
-		id:    id,
+		// queue: NewPackQueue(rw),
+		id: id,
 	}
 }
 
 func (cs *ControlServer) listen_loop() (err error) {
 	defer func() {
 		// Close the res
-		cs.queue.Close()
+		// cs.queue.Close()
 	}()
 	var pack *spp.Pack
 	for {
 		// Listen
-		pack, err = cs.queue.ReadPack()
-		if err != nil {
-			// glog.Errorf("clientLoop read pack error:%v\n", err)
-			break
-		}
+		// pack, err = cs.queue.ReadPack()
+		// if err != nil {
+		// glog.Errorf("clientLoop read pack error:%v\n", err)
+		// break
+		// }
 		f := ctrl_handles[pack.Typ]
 		if f == nil {
 			err = fmt.Errorf("No such pack type:%v", pack.Typ)

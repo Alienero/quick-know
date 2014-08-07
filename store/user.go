@@ -22,12 +22,12 @@ type Ctrl struct {
 	Auth string
 }
 
-func Client_login(id, psw, owner string) bool {
+func Client_login(id, psw string) bool {
 	sei := sei_user.New()
 	defer sei.Refresh()
 	c := sei.DB(Config.UserName).C(Config.Clients)
 	var u = new(User)
-	it := c.Find(bson.M{"id": id, "psw": psw, "owner": owner}).Iter()
+	it := c.Find(bson.M{"id": id, "psw": psw}).Iter()
 	defer it.Close()
 	if !it.Next(u) {
 		return false
@@ -47,6 +47,7 @@ func Ctrl_login(id, auth string) (bool, string) {
 
 	return true, u.Id
 }
+
 func Ctrl_login_alive(id, psw string) bool { return false }
 
 // Add or del user

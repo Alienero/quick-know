@@ -97,7 +97,7 @@ func getbeat_heartResp(status bool) ([]byte, error) {
 // Get the msg's data
 type user_msg struct {
 	Body   []byte
-	Msg_id string
+	Msg_id int
 	Typ    int
 }
 

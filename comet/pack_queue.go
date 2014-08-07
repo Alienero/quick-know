@@ -7,6 +7,8 @@ package comet
 import (
 	"bufio"
 	"fmt"
+	"net"
+	"time"
 
 	// "github.com/Alienero/spp"
 	"github.com/Alienero/quick-know/mqtt"
@@ -24,6 +26,8 @@ type PackQueue struct {
 	// Pack connection
 	r *bufio.Reader
 	w *bufio.Writer
+
+	conn net.Conn
 }
 type packAndErr struct {
 	pack *mqtt.Pack
@@ -37,10 +41,11 @@ type pakcAdnType struct {
 }
 
 // Init a pack queue
-func NewPackQueue(r *bufio.Reader, w *bufio.Writer) *PackQueue {
+func NewPackQueue(r *bufio.Reader, w *bufio.Writer, conn net.Conn) *PackQueue {
 	return &PackQueue{
 		r:         r,
 		w:         w,
+		conn:      conn,
 		writeChan: make(chan *pakcAdnType, Conf.WirteLoopChanNum),
 		readChan:  make(chan *packAndErr, 1),
 		errorChan: make(chan error, 1),
@@ -59,12 +64,14 @@ loop:
 			if pt == nil {
 				break loop
 			}
-
+			if Conf.WriteTimeout > 0 {
+				queue.conn.SetWriteDeadline(time.Now().Add(time.Duration(Conf.WriteTimeout)))
+			}
 			switch pt.typ {
 			case 0:
-				err = mqtt.WritePack(pack, queue.w)
+				err = mqtt.WritePack(pt.pack, queue.w)
 			case 1:
-				err = mqtt.DelayWritePack(pack, queue.w)
+				err = mqtt.DelayWritePack(pt.pack, queue.w)
 			case 2:
 				err = queue.w.Flush()
 			}
@@ -114,7 +121,10 @@ func (queue *PackQueue) Flush() error {
 func (queue *PackQueue) ReadPack() (pack *mqtt.Pack, err error) {
 	go func() {
 		p := new(packAndErr)
-		p.pack, p.err = queue.rw.ReadPack()
+		if Conf.ReadTimeout > 0 {
+			queue.conn.SetReadDeadline(time.Now().Add(time.Duration(Conf.ReadTimeout)))
+		}
+		p.pack, p.err = mqtt.ReadPack(queue.r)
 		queue.readChan <- p
 	}()
 	select {
@@ -137,6 +147,9 @@ func (queue *PackQueue) ReadPackInLoop(fin <-chan byte) <-chan *packAndErr {
 		p := new(packAndErr)
 	loop:
 		for {
+			if Conf.ReadTimeout > 0 {
+				queue.conn.SetReadDeadline(time.Now().Add(time.Duration(Conf.ReadTimeout)))
+			}
 			p.pack, p.err = mqtt.ReadPack(queue.r)
 			select {
 			case ch <- p:

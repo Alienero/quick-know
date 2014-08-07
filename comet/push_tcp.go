@@ -82,36 +82,20 @@ func (c *conn) serve() {
 		glog.Errorf("conn.SetKeepAlive() error(%v)\n", err)
 		return
 	}
-	if err = tcp.SetReadDeadline(time.Second * Conf.ReadTimeout); err != nil {
-		glog.Errorf("conn.SetReadDeadline() error(%v)\n", err)
-		return
-	}
-	if err = tcp.SetWriteDeadline(time.Second * Conf.WriteTimeout); err != nil {
-		glog.Errorf("conn.SetWriteDeadline() error(%v)\n", err)
-		return
-	}
 
-	// packRW := spp.NewConn(tcp)
-	// packRW.SetWriteDeadline(time.Duration(Conf.WriteTimeout) * time.Second)
-	// packRW.SetReadDeadline(time.Duration(Conf.ReadTimeout) * time.Second)
 	var l listener
-	if l, err = login(packRW, c.typ); err != nil {
+	if l, err = login(c.r, c.w, c.rw, c.typ); err != nil {
 		glog.Errorf("Login error :%v\n", err)
 		return
 	}
-	body, err := getLoginResponse("1", "127.0.0.1", true, "")
-	if err != nil {
-		return
-	}
-	pack, _ := packRW.SetDefaultPack(LOGIN, body)
-	err = packRW.WritePack(pack)
+	err = mqtt.WritePack(mqtt.GetConnAckPack(0), c.w)
 	if err != nil {
 		return
 	}
 	l.listen_loop()
 }
 
-func login(r *bufio.Reader, typ int) (l listener, err error) {
+func login(r *bufio.Reader, w *bufio.Writer, conn net.Conn, typ int) (l listener, err error) {
 	var pack *mqtt.Pack
 	pack, err = mqtt.ReadPack(r)
 	if err != nil {
@@ -119,7 +103,7 @@ func login(r *bufio.Reader, typ int) (l listener, err error) {
 		return
 	}
 	if pack.GetType() != mqtt.CONNECT {
-		err = fmt.Errorf("Recive login pack's type error:%v \n", pack.Typ)
+		err = fmt.Errorf("Recive login pack's type error:%v \n", pack.GetType())
 		return
 	}
 	info, ok := (pack.GetVariable()).(*mqtt.Connect)
@@ -148,7 +132,7 @@ func login(r *bufio.Reader, typ int) (l listener, err error) {
 					tc.lock.Unlock()
 					<-tc.CloseChan
 				case <-time.After(3 * time.Second):
-					if tc := Users.Get(req.Id); tc != nil {
+					if tc := Users.Get(*id); tc != nil {
 						return nil, errors.New("Close the logon user timeout")
 					}
 				}
@@ -157,19 +141,19 @@ func login(r *bufio.Reader, typ int) (l listener, err error) {
 			}
 
 		}
-		c := newClient(rw, req.Id)
-		Users.Set(req.Id, c)
+		c := newClient(r, w, conn, *id)
+		Users.Set(*id, c)
 		l = c
 	case CSERVER:
 		// TODO : Base64
-		if !store.Ctrl_login_alive() {
+		if !store.Ctrl_login_alive(*id, *psw) {
 			err = fmt.Errorf("Client Authentication is not passed id:%v,psw:%v", *id, *psw)
 			break
 		}
-		// TODO limit ctrl server users
-		cs := newCServer(rw, req.Id)
-		ctrls.Set(*id, cs)
-		l = cs
+		// TODO
+		// cs := newCServer(rw, req.Id)
+		// ctrls.Set(*id, cs)
+		// l = cs
 	default:
 		fmt.Errorf("No such pack type :%v", typ)
 	}
