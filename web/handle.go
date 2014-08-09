@@ -14,6 +14,12 @@ import (
 	"github.com/golang/glog"
 )
 
+var (
+	Private = "m/"
+	Group   = "ms/"
+	Inf_All = "inf/all"
+)
+
 // Push a private msg
 func private_msg(w http.ResponseWriter, r *http.Request, u *user) {
 	glog.Info("Add a private msg")
@@ -25,11 +31,10 @@ func private_msg(w http.ResponseWriter, r *http.Request, u *user) {
 	}
 	if store.IsUserExist(msg.To_id, u.ID) {
 		msg.Owner = u.ID
-		msg.Msg_id = get_uuid()
+		// msg.Msg_id = get_uuid()
+		msg.Topic = Private + msg.To_id
 		comet.WriteOnlineMsg(msg)
-		io.WriteString(w, `{msg_id":"`)
-		io.WriteString(w, msg.Msg_id)
-		io.WriteString(w, `"}`)
+		io.WriteString(w, `{Status":"Success"}`)
 	} else {
 		badReaquest(w, `{Status":"Fail"}`)
 	}
@@ -143,14 +148,15 @@ func rm_user_sub(w http.ResponseWriter, r *http.Request, uu *user) {
 // Send msg to all
 func broadcast(w http.ResponseWriter, r *http.Request, uu *user) {
 	msg := new(store.Msg)
+	msg.Topic = Inf_All
 	err := readAdnGet(r.Body, msg)
 	if err != nil {
-		glog.Errorf("push private msg error%v\n", err)
+		glog.Errorf("push inform msg error%v\n", err)
 		return
 	}
 	if store.IsUserExist(msg.To_id, uu.ID) && msg.To_id == "" {
 		msg.Owner = uu.ID
-		msg.Msg_id = get_uuid()
+		// msg.Msg_id = get_uuid()
 
 		ch := store.ChanUserID(uu.ID)
 		go func() {
@@ -163,9 +169,7 @@ func broadcast(w http.ResponseWriter, r *http.Request, uu *user) {
 				comet.WriteOnlineMsg(msg)
 			}
 		}()
-		io.WriteString(w, `{msg_id":"`)
-		io.WriteString(w, msg.Msg_id)
-		io.WriteString(w, `"}`)
+		io.WriteString(w, `{Status":"Success"}`)
 	} else {
 		badReaquest(w, `{Status":"Fail"}`)
 	}
@@ -185,7 +189,8 @@ func group_msg(w http.ResponseWriter, r *http.Request, uu *user) {
 	}
 	// Check the sub group belong to the user
 	if store.IsSubExist(mc.Sub_id, uu.ID) {
-		mc.Msg.Msg_id = get_uuid()
+		// mc.Msg.Msg_id = get_uuid()
+		mc.Msg.Topic = Group + mc.Sub_id
 		// Submit msg
 		go func() {
 			ch := store.ChanSubUsers(mc.Sub_id)
@@ -198,9 +203,7 @@ func group_msg(w http.ResponseWriter, r *http.Request, uu *user) {
 				comet.WriteOnlineMsg(mc.Msg)
 			}
 		}()
-		io.WriteString(w, `{msg_id":"`)
-		io.WriteString(w, mc.Msg.Msg_id)
-		io.WriteString(w, `"}`)
+		io.WriteString(w, `{Status":"Success"}`)
 	} else {
 		badReaquest(w, `{Status":"Fail"}`)
 	}
