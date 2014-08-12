@@ -74,12 +74,11 @@ func newClient(r *bufio.Reader, w *bufio.Writer, conn net.Conn, id string) *clie
 
 // Push the msg and response the heart beat
 func (c *client) listen_loop() (e error) {
-
+	defer Users.Del(c.id)
 	var (
 		err     error
 		msg     *store.Msg
 		pAndErr *packAndErr
-		pack    *mqtt.Pack
 
 		noticeFin = make(chan byte)
 
@@ -116,9 +115,12 @@ loop:
 			// Push the online msg
 			glog.Info("Get a online msg")
 			// Check the msg time
-			if time.Now().UTC().Unix() > msg.Expired {
-				// cancel send the msg
-				break
+			if msg.Expired > 0 {
+				if time.Now().UTC().Unix() > msg.Expired {
+					// cancel send the msg
+					glog.Info("Out of time")
+					break
+				}
 			}
 			// Add the msg into cache
 			if msg == nil {
@@ -146,7 +148,7 @@ loop:
 			// hava not recive a heart beat pack at an
 			// given time.
 			if pAndErr.err != nil {
-				glog.Info("Get a connection error , will break")
+				glog.Infof("Get a connection error , will break(%v)", pAndErr.err)
 				err = pAndErr.err
 				break loop
 			}
@@ -155,8 +157,9 @@ loop:
 			// Choose the requst type
 			switch pAndErr.pack.GetType() {
 			case mqtt.PUBACK:
-				ack := pack.GetVariable().(*mqtt.Puback)
-				if ack.GetMid() > 65535 {
+				ack := pAndErr.pack.GetVariable().(*mqtt.Puback)
+
+				if ack.GetMid() > math.MaxInt16 {
 					c.delMsg(OFFLINE, ack.GetMid())
 				} else {
 					// Online msg
@@ -166,7 +169,7 @@ loop:
 			case mqtt.PINGREQ:
 				// Reply the heart beat
 				glog.Info("hb msg")
-				err = c.queue.WritePack(mqtt.GetPingRespPack(1, msg.Dup))
+				err = c.queue.WritePack(mqtt.GetPingResp(1, pAndErr.pack.GetDup()))
 				if err != nil {
 					break loop
 				}
@@ -190,16 +193,10 @@ loop:
 		noticeFin <- 1
 	}
 	// Write the onlines msg to the db
-	i, err := store.GetOfflineCount(c.id)
+	i, err := getOfflineId(c.id)
 	if err != nil {
-		glog.Errorf("Select warning: %v", err)
+		glog.Errorf("Get offline msg error:%v", err)
 		goto passInsertOffline
-	}
-	if i == math.MaxUint16 {
-		goto passInsertOffline
-	}
-	if i == 0 {
-		i = 65536
 	}
 	for _, v := range c.onlineCache {
 		// Add the offline msg id
@@ -222,16 +219,14 @@ passInsertOffline:
 	}
 	close(c.CloseChan)
 
-	Users.Del(c.id)
-
 	return
 }
 
 // Setting a mqtt pack's id.
 func (c *client) getOnlineMsgId() int {
-	if c.curr_id == 65535 {
+	if c.curr_id == math.MaxInt16 {
 		i := 0
-		for i < 65536-len(c.onlineCache) {
+		for i < math.MaxInt16+1-len(c.onlineCache) {
 			if m := c.onlineCache[i]; m == nil {
 				c.curr_id = i
 				return c.curr_id
@@ -241,7 +236,7 @@ func (c *client) getOnlineMsgId() int {
 		return -1
 	} else {
 		id := c.curr_id
-		for i := 0; i < 65535-c.curr_id; i++ {
+		for i := 0; i < math.MaxInt16-c.curr_id; i++ {
 			id++
 			if m := c.onlineCache[id]; m == nil {
 				c.curr_id = id
@@ -299,18 +294,31 @@ func (c *client) pushOfflineMsg(msg *store.Msg) (err error) {
 func WriteOnlineMsg(msg *store.Msg) {
 	// fix the Expired
 	if msg.Expired > 0 {
-		msg.Expired += time.Now().UTC().Unix()
+		msg.Expired = time.Now().UTC().Add(time.Duration(msg.Expired)).Unix()
 	}
 
 	c := Users.Get(msg.To_id)
 	if c == nil {
 		msg.Typ = OFFLINE
+		// Get the offline msg id
+		i, err := getOfflineId(msg.To_id)
+		if err != nil {
+			glog.Errorf("get offline msg id error:%v", err)
+			return
+		}
+		msg.Msg_id = i
 		store.InsertOfflineMsg(msg)
 		return
 	}
 
 	c.lock.Lock()
 	if len(c.onlines) == Conf.MaxCacheMsg {
+		i, err := getOfflineId(msg.To_id)
+		if err != nil {
+			glog.Errorf("get offline msg id error:%v", err)
+			return
+		}
+		msg.Msg_id = i
 		msg.Typ = OFFLINE
 		store.InsertOfflineMsg(msg)
 		c.lock.Unlock()
@@ -318,6 +326,12 @@ func WriteOnlineMsg(msg *store.Msg) {
 	}
 	if c.isStop {
 		c.lock.Unlock()
+		i, err := getOfflineId(msg.To_id)
+		if err != nil {
+			glog.Errorf("get offline msg id error:%v", err)
+			return
+		}
+		msg.Msg_id = i
 		msg.Typ = OFFLINE
 		store.InsertOfflineMsg(msg)
 	} else {
@@ -325,4 +339,19 @@ func WriteOnlineMsg(msg *store.Msg) {
 		c.onlines <- msg
 		c.lock.Unlock()
 	}
+}
+
+func getOfflineId(id string) (int, error) {
+	i, err := store.GetOfflineCount(id)
+	if err != nil {
+		i = math.MaxInt16
+	}
+	if i < 1 {
+		i = math.MaxInt16
+	}
+	if i == math.MaxUint16 {
+		glog.Info("Give up the offline msg")
+		return 0, errors.New("i == MaxUnit16")
+	}
+	return i + 1, nil
 }

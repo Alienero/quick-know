@@ -527,7 +527,7 @@ func GetPubPack(qos byte, dup byte, mid int, topic *string, msg []byte) *Pack {
 }
 
 // Get a request for ping pack
-func GetPingRespPack(qos byte, dup byte) *Pack {
+func GetPingResp(qos byte, dup byte) *Pack {
 	pack := new(Pack)
 	pack.SetQos(qos)
 	pack.SetDup(dup)

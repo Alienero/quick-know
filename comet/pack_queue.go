@@ -65,7 +65,7 @@ loop:
 				break loop
 			}
 			if Conf.WriteTimeout > 0 {
-				queue.conn.SetWriteDeadline(time.Now().Add(time.Duration(Conf.WriteTimeout)))
+				queue.conn.SetWriteDeadline(time.Now().Add(time.Second * time.Duration(Conf.WriteTimeout)))
 			}
 			switch pt.typ {
 			case 0:
@@ -122,7 +122,7 @@ func (queue *PackQueue) ReadPack() (pack *mqtt.Pack, err error) {
 	go func() {
 		p := new(packAndErr)
 		if Conf.ReadTimeout > 0 {
-			queue.conn.SetReadDeadline(time.Now().Add(time.Duration(Conf.ReadTimeout)))
+			queue.conn.SetReadDeadline(time.Now().Add(time.Second * time.Duration(Conf.ReadTimeout)))
 		}
 		p.pack, p.err = mqtt.ReadPack(queue.r)
 		queue.readChan <- p
@@ -148,7 +148,7 @@ func (queue *PackQueue) ReadPackInLoop(fin <-chan byte) <-chan *packAndErr {
 	loop:
 		for {
 			if Conf.ReadTimeout > 0 {
-				queue.conn.SetReadDeadline(time.Now().Add(time.Duration(Conf.ReadTimeout)))
+				queue.conn.SetReadDeadline(time.Now().Add(time.Second * time.Duration(Conf.ReadTimeout)))
 			}
 			p.pack, p.err = mqtt.ReadPack(queue.r)
 			select {
