@@ -165,8 +165,9 @@ func broadcast(w http.ResponseWriter, r *http.Request, uu *user) {
 				if !ok {
 					break
 				}
-				msg.To_id = s
-				comet.WriteOnlineMsg(msg)
+				m := *msg
+				m.To_id = s
+				comet.WriteOnlineMsg(&m)
 			}
 		}()
 		io.WriteString(w, `{Status":"Success"}`)
@@ -199,8 +200,9 @@ func group_msg(w http.ResponseWriter, r *http.Request, uu *user) {
 				if !ok {
 					break
 				}
-				mc.Msg.To_id = s
-				comet.WriteOnlineMsg(mc.Msg)
+				msg := *mc.Msg
+				msg.To_id = s
+				comet.WriteOnlineMsg(&msg)
 			}
 		}()
 		io.WriteString(w, `{Status":"Success"}`)

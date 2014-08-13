@@ -84,6 +84,7 @@ func IsUserExist(uid, oid string) bool {
 	return it.Next(u)
 }
 
+// Get the All use's id.
 func ChanUserID(own string) <-chan string {
 	ch := make(chan string, 100)
 	go func() {
