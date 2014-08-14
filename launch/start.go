@@ -5,6 +5,7 @@ import (
 	"runtime"
 
 	"github.com/Alienero/quick-know/comet"
+	"github.com/Alienero/quick-know/signal"
 	"github.com/Alienero/quick-know/store"
 	"github.com/Alienero/quick-know/web"
 
@@ -33,6 +34,11 @@ func main() {
 	go web.Start()
 	glog.Infoln("Web server has been started!")
 
-	comet.Start()
+	go comet.Start()
 	glog.Infoln("Comet server has been started!")
+
+	// init signals, block wait signals
+	signal.HandleSignal(signal.InitSignal())
+	// exit
+	glog.Info("Sysytem exit")
 }
