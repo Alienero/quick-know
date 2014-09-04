@@ -225,7 +225,7 @@ passInsertOffline:
 // Setting a mqtt pack's id.
 func (c *client) getOnlineMsgId() int {
 	if c.curr_id == math.MaxInt16 {
-		i := 0
+		i := 1
 		for i < math.MaxInt16+1-len(c.onlineCache) {
 			if m := c.onlineCache[i]; m == nil {
 				c.curr_id = i
@@ -235,6 +235,7 @@ func (c *client) getOnlineMsgId() int {
 		}
 		return -1
 	} else {
+		c.curr_id++
 		id := c.curr_id
 		for i := 0; i < math.MaxInt16-c.curr_id; i++ {
 			id++
@@ -262,7 +263,7 @@ func (c *client) delMsg(typ int, msg_id int) {
 		store.DelOfflineMsg(msg_id, c.id)
 	case ONLINE:
 		// Del the online msg in the msg cache
-		glog.Info("Del a online msg")
+		glog.Infof("Del a online msg id:%v", msg_id)
 		delete(c.onlineCache, msg_id)
 	default:
 		glog.Errorf("No define the type:%v", typ)

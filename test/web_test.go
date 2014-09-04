@@ -46,7 +46,7 @@ import (
 // }
 
 func addMsg(t *testing.T) {
-	u := &store.Msg{Body: []byte("hello push server 这是离线线消息"), To_id: "29d2b76f47e4f2e36e732a53c74e2731"}
+	u := &store.Msg{Body: []byte("这是离线消息2"), To_id: "29d2b76f47e4f2e36e732a53c74e2731"}
 	data, err := json.Marshal(u)
 	if err != nil {
 		t.Error(err)
