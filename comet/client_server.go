@@ -293,6 +293,7 @@ func (c *client) pushOfflineMsg(msg *store.Msg) (err error) {
 }
 
 func WriteOnlineMsg(msg *store.Msg) {
+	msg.Dup = 0
 	// fix the Expired
 	if msg.Expired > 0 {
 		msg.Expired = time.Now().UTC().Add(time.Duration(msg.Expired)).Unix()

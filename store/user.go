@@ -64,10 +64,16 @@ func DelUser(id string, own string) error {
 	if !IsUserExist(id, own) {
 		return fmt.Errorf("Del a user error:user not found,ID:%v,Own:%v", id, own)
 	}
+	sei_m := sei_msg.New()
+	defer sei_m.Refresh()
+	_, err := sei_m.DB(Config.MsgName).C(Config.SubsName).RemoveAll(bson.M{"user_id": id})
+	if err != nil {
+		glog.Errorf("Remove the user's(%v) subs :%v\n", id, err)
+	}
 	sei := sei_user.New()
 	defer sei.Refresh()
 	c := sei.DB(Config.UserName).C(Config.Clients)
-	err := c.Remove(bson.M{"id": id, "owner": own})
+	err = c.Remove(bson.M{"id": id, "owner": own})
 	if err != nil {
 		glog.Errorf("Del a user error:%v,ID:%v,Own:%v", err, id, own)
 		return err

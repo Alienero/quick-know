@@ -1,3 +1,7 @@
+// Copyright © 2014 Alienero. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package web
 
 import (
@@ -20,5 +24,4 @@ func Start() {
 
 	glog.Infof("Listen at port :%v", Conf.Listen_addr)
 	glog.Error(http.ListenAndServe(Conf.Listen_addr, nil))
-	// http.ListenAndServeTLS(addr, certFile, keyFile, handler)
 }

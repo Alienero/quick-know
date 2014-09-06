@@ -15,6 +15,7 @@ import (
 )
 
 var (
+	// [type]/|[.../][who send]
 	Private = "m/"
 	Group   = "ms/"
 	Inf_All = "inf/all"
@@ -32,7 +33,7 @@ func private_msg(w http.ResponseWriter, r *http.Request, u *user) {
 	if store.IsUserExist(msg.To_id, u.ID) {
 		msg.Owner = u.ID
 		// msg.Msg_id = get_uuid()
-		msg.Topic = Private + msg.To_id
+		msg.Topic = Private + msg.Owner
 		comet.WriteOnlineMsg(msg)
 		io.WriteString(w, `{Status":"Success"}`)
 	} else {
