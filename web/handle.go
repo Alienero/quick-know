@@ -138,7 +138,7 @@ func rm_user_sub(w http.ResponseWriter, r *http.Request, uu *user) {
 		glog.Errorf("Get the remove user(%v) of id(%v) to sub(%v) error:%v\n", sm.User_id, uu.ID, sm.Sub_id, err)
 		return
 	}
-	if err = store.DelUserFromSub(sm.Sub_id, sm.User_id, uu.ID); err != nil {
+	if err = store.DelUserFromSub(sm, uu.ID); err != nil {
 		glog.Errorf("Del the user o error:%v\n", err)
 		badReaquest(w, `{Status":"Fail"}`)
 	} else {

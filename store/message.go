@@ -17,7 +17,7 @@ type Msg struct {
 	To_id  string
 	Topic  string
 	Body   []byte
-	Typ    int
+	Typ    int // Online or Oflline msg
 
 	Dup byte // mqtt dup
 

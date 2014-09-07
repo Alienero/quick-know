@@ -69,17 +69,17 @@ func AddUserToSub(sm *Sub_map, id string) error {
 	}
 }
 
-func DelUserFromSub(sub_id, uid, id string) error {
-	if IsUserExist(uid, id) && IsSubExist(sub_id, id) {
+func DelUserFromSub(sm *Sub_map, id string) error {
+	if IsUserExist(sm.User_id, id) && IsSubExist(sm.Sub_id, id) {
 		sei := sei_msg.New()
 		defer sei.Refresh()
-		err := sei.DB(Config.MsgName).C(Config.SubsName).Remove(bson.M{"sub_id": sub_id, "user_id": uid})
+		err := sei.DB(Config.MsgName).C(Config.SubsName).Remove(bson.M{"sub_id": sm.Sub_id, "user_id": sm.User_id})
 		if err != nil {
-			glog.Errorf("Remove the user(%v) from the sub(%v) error:%v\n", uid, sub_id, err)
+			glog.Errorf("Remove the user(%v) from the sub(%v) error:%v\n", sm.User_id, sm.Sub_id, err)
 		}
 		return nil
 	}
-	return fmt.Errorf("sub(%v) or user(%v) of the id(%v) not exist", sub_id, uid, id)
+	return fmt.Errorf("sub(%v) or user(%v) of the id(%v) not exist", sm.Sub_id, sm.User_id, id)
 }
 
 func IsSubExist(sub_id, id string) bool {
