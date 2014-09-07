@@ -19,8 +19,8 @@ func Start() {
 	http.Handle("/push/del_sub", &handle{Post: del_sub})
 	http.Handle("/push/user_sub", &handle{Post: user_sub})
 	http.Handle("/push/rm_user_sub", &handle{Post: rm_user_sub})
-	http.Handle("/push/all", &handle{Post: broadcast})
 	http.Handle("/push/group_msg", &handle{Post: group_msg})
+	http.Handle("/push/all", &handle{Post: broadcast})
 
 	glog.Infof("Listen at port :%v", Conf.Listen_addr)
 	glog.Error(http.ListenAndServe(Conf.Listen_addr, nil))
