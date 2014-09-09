@@ -35,9 +35,9 @@ func private_msg(w http.ResponseWriter, r *http.Request, u *user) {
 		// msg.Msg_id = get_uuid()
 		msg.Topic = Private + msg.Owner
 		comet.WriteOnlineMsg(msg)
-		io.WriteString(w, `{Status":"Success"}`)
+		io.WriteString(w, `{"status":"success"}`)
 	} else {
-		badReaquest(w, `{Status":"Fail"}`)
+		badReaquest(w, `{"status":"fail"}`)
 	}
 }
 
@@ -53,7 +53,7 @@ func add_user(w http.ResponseWriter, r *http.Request, uu *user) {
 	u.Owner = uu.ID
 	u.Id = get_uuid()
 	store.AddUser(u)
-	io.WriteString(w, `{id":"`)
+	io.WriteString(w, `{"id":"`)
 	io.WriteString(w, u.Id)
 	io.WriteString(w, `"}`)
 }
@@ -68,11 +68,11 @@ func del_user(w http.ResponseWriter, r *http.Request, uu *user) {
 	}
 	if err := store.DelUser(u.Id, uu.ID); err != nil {
 		glog.Errorf("Del user in the web error:%v", err)
-		io.WriteString(w, `{id":"`)
+		io.WriteString(w, `{"id":"`)
 		io.WriteString(w, u.Id)
 		io.WriteString(w, `"}`)
 	} else {
-		badReaquest(w, `{Status":"Fail"}`)
+		badReaquest(w, `{"status":"fail"}`)
 	}
 }
 
@@ -88,7 +88,7 @@ func add_sub(w http.ResponseWriter, r *http.Request, uu *user) {
 	sub.Own = uu.ID
 	store.AddSub(sub)
 	// Write the response
-	io.WriteString(w, `{sub_id":"`)
+	io.WriteString(w, `{"sub_id":"`)
 	io.WriteString(w, sub.Id)
 	io.WriteString(w, `"}`)
 }
@@ -105,11 +105,11 @@ func del_sub(w http.ResponseWriter, r *http.Request, uu *user) {
 	if err := store.DelSub(sub.Id, uu.ID); err != nil {
 		// Write the response
 		glog.Errorf("Del sub in the web error:%v", err)
-		io.WriteString(w, `{sub_id":"`)
+		io.WriteString(w, `{"sub_id":"`)
 		io.WriteString(w, sub.Id)
 		io.WriteString(w, `"}`)
 	} else {
-		badReaquest(w, `{Status":"Fail"}`)
+		badReaquest(w, `{"status":"fail"}`)
 	}
 }
 
@@ -124,9 +124,9 @@ func user_sub(w http.ResponseWriter, r *http.Request, uu *user) {
 	// Write the response
 	if err = store.AddUserToSub(sm, uu.ID); err != nil {
 		glog.Errorf("Store the sub_map error:", err)
-		badReaquest(w, `{Status":"Fail"}`)
+		badReaquest(w, `{"status":"fail"}`)
 	} else {
-		io.WriteString(w, `{Status":"OK"}`)
+		io.WriteString(w, `{"status":"success"}`)
 	}
 }
 
@@ -140,9 +140,9 @@ func rm_user_sub(w http.ResponseWriter, r *http.Request, uu *user) {
 	}
 	if err = store.DelUserFromSub(sm, uu.ID); err != nil {
 		glog.Errorf("Del the user o error:%v\n", err)
-		badReaquest(w, `{Status":"Fail"}`)
+		badReaquest(w, `{"status":"fail"}`)
 	} else {
-		io.WriteString(w, `{Status":"OK"}`)
+		io.WriteString(w, `{"status":"success"}`)
 	}
 }
 
@@ -171,9 +171,9 @@ func broadcast(w http.ResponseWriter, r *http.Request, uu *user) {
 				comet.WriteOnlineMsg(&m)
 			}
 		}()
-		io.WriteString(w, `{Status":"Success"}`)
+		io.WriteString(w, `{"status":"success"}`)
 	} else {
-		badReaquest(w, `{Status":"Fail"}`)
+		badReaquest(w, `{"status":"fail"}`)
 	}
 }
 
@@ -206,9 +206,9 @@ func group_msg(w http.ResponseWriter, r *http.Request, uu *user) {
 				comet.WriteOnlineMsg(&msg)
 			}
 		}()
-		io.WriteString(w, `{Status":"Success"}`)
+		io.WriteString(w, `{"status":"success"}`)
 	} else {
-		badReaquest(w, `{Status":"Fail"}`)
+		badReaquest(w, `{"status":"fail"}`)
 	}
 }
 

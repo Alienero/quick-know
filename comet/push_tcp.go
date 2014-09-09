@@ -141,7 +141,7 @@ func login(r *bufio.Reader, w *bufio.Writer, conn net.Conn, typ int) (l listener
 			}
 
 		}
-		c := newClient(r, w, conn, *id)
+		c := newClient(r, w, conn, *id, info.GetKeepAlive())
 		Users.Set(*id, c)
 		l = c
 	case CSERVER:

@@ -28,6 +28,8 @@ type PackQueue struct {
 	w *bufio.Writer
 
 	conn net.Conn
+
+	alive int
 }
 type packAndErr struct {
 	pack *mqtt.Pack
@@ -41,8 +43,12 @@ type pakcAdnType struct {
 }
 
 // Init a pack queue
-func NewPackQueue(r *bufio.Reader, w *bufio.Writer, conn net.Conn) *PackQueue {
+func NewPackQueue(r *bufio.Reader, w *bufio.Writer, conn net.Conn, alive int) *PackQueue {
+	if alive < 1 {
+		alive = Conf.ReadTimeout
+	}
 	return &PackQueue{
+		alive:     alive,
 		r:         r,
 		w:         w,
 		conn:      conn,
@@ -147,8 +153,8 @@ func (queue *PackQueue) ReadPackInLoop(fin <-chan byte) <-chan *packAndErr {
 		p := new(packAndErr)
 	loop:
 		for {
-			if Conf.ReadTimeout > 0 {
-				queue.conn.SetReadDeadline(time.Now().Add(time.Second * time.Duration(Conf.ReadTimeout)))
+			if queue.alive > 0 {
+				queue.conn.SetReadDeadline(time.Now().Add(time.Second * time.Duration(queue.alive)))
 			}
 			p.pack, p.err = mqtt.ReadPack(queue.r)
 			select {

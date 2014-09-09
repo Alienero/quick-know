@@ -41,13 +41,13 @@ func TestInsertUser(t *testing.T) {
 }
 
 func TestLogin(t *testing.T) {
-	if b := Client_login("1001", "102", "1234"); !b {
+	if b := Client_login("1001", "102"); !b {
 		t.Errorf("Error login")
 	}
 }
 
 func TestCtrlLogin(t *testing.T) {
-	if b, id := Ctrl_login("10086", "1234"); !b || id != "1234" {
+	if b, id := Ctrl_login("1234", "10086"); !b || id != "1234" {
 		t.Errorf("Error login")
 	}
 }
@@ -89,7 +89,7 @@ func TestSub(t *testing.T) {
 	if err := AddUserToSub(&Sub_map{"12", "1001"}, "1234"); err != nil {
 		t.Error(err)
 	}
-	if err := DelUserFromSub("12", "1001", "1234"); err != nil {
+	if err := DelUserFromSub(&Sub_map{"12", "1001"}, "1234"); err != nil {
 		t.Error(err)
 	}
 	if err := DelSub("12", "1234"); err != nil {
