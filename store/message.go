@@ -11,19 +11,6 @@ import (
 	"labix.org/v2/mgo/bson"
 )
 
-type Msg struct {
-	Msg_id int    // Msg ID
-	Owner  string // Owner
-	To_id  string
-	Topic  string
-	Body   []byte
-	Typ    int // Online or Oflline msg
-
-	Dup byte // mqtt dup
-
-	Expired int64
-}
-
 // id is to_id (client id)
 func GetOfflineMsg(id string, fin <-chan byte) (<-chan *Msg, <-chan byte) {
 	// defer recover()

@@ -7,19 +7,8 @@ package store
 import (
 	"fmt"
 
-	"github.com/golang/glog"
 	"labix.org/v2/mgo/bson"
 )
-
-type User struct {
-	Id    string
-	Psw   string
-	Owner string // Owner
-}
-type Ctrl struct {
-	Id   string
-	Auth string
-}
 
 func Client_login(id, psw string) bool {
 	sei := sei_user.New()
@@ -50,14 +39,11 @@ func Ctrl_login(id, auth string) (bool, string) {
 func Ctrl_login_alive(id, psw string) bool { return false }
 
 // Add or del user
-func AddUser(u *User) {
+func AddUser(u *User) error {
 	sei := sei_user.New()
 	defer sei.Refresh()
 	c := sei.DB(Config.UserName).C(Config.Clients)
-	err := c.Insert(u)
-	if err != nil {
-		glog.Errorf("Insert a new user error:%v", err)
-	}
+	return c.Insert(u)
 }
 func DelUser(id string, own string) error {
 	if !IsUserExist(id, own) {
@@ -67,14 +53,13 @@ func DelUser(id string, own string) error {
 	defer sei_m.Refresh()
 	_, err := sei_m.DB(Config.MsgName).C(Config.SubsName).RemoveAll(bson.M{"user_id": id})
 	if err != nil {
-		glog.Errorf("Remove the user's(%v) subs :%v\n", id, err)
+		return err
 	}
 	sei := sei_user.New()
 	defer sei.Refresh()
 	c := sei.DB(Config.UserName).C(Config.Clients)
 	err = c.Remove(bson.M{"id": id, "owner": own})
 	if err != nil {
-		glog.Errorf("Del a user error:%v,ID:%v,Own:%v", err, id, own)
 		return err
 	}
 	return nil

@@ -7,30 +7,14 @@ package store
 import (
 	"fmt"
 
-	"github.com/golang/glog"
 	"labix.org/v2/mgo/bson"
 )
 
-type Sub struct {
-	Id  string
-	Own string
-
-	Max int // Max of the group members
-	Typ int
-}
-type Sub_map struct {
-	Sub_id  string
-	User_id string
-}
-
-func AddSub(sub *Sub) {
+func AddSub(sub *Sub) error {
 	sei := sei_msg.New()
 	defer sei.Refresh()
 	c := sei.DB(Config.MsgName).C(Config.SubName)
-	err := c.Insert(sub)
-	if err != nil {
-		glog.Errorf("Insert a new sub group error:%v\n", err)
-	}
+	return c.Insert(sub)
 }
 
 func DelSub(sub_id, id string) error {
@@ -40,13 +24,11 @@ func DelSub(sub_id, id string) error {
 		c := sei.DB(Config.MsgName).C(Config.SubsName)
 		_, err := c.RemoveAll(bson.M{"sub_id": sub_id})
 		if err != nil {
-			glog.Errorf("Del a sub group's all members error:%v\n", err)
 			return err
 		}
 		c = sei.DB(Config.MsgName).C(Config.SubName)
 		err = c.Remove(bson.M{"id": sub_id})
 		if err != nil {
-			glog.Errorf("Del a sub group error:%v\n", err)
 			return err
 		}
 		return nil
@@ -60,10 +42,7 @@ func AddUserToSub(sm *Sub_map, id string) error {
 	defer sei.Refresh()
 
 	if IsSubExist(sm.Sub_id, id) && IsUserExist(sm.User_id, id) {
-		if err := sei.DB(Config.MsgName).C(Config.SubsName).Insert(sm); err != nil {
-			glog.Errorf("Insert a new sub's user error:%v\n", err)
-		}
-		return nil
+		return sei.DB(Config.MsgName).C(Config.SubsName).Insert(sm)
 	} else {
 		return fmt.Errorf("sub(%v) or user(%v) of id(%v) not exist ", sm.Sub_id, sm.User_id, id)
 	}
@@ -73,11 +52,7 @@ func DelUserFromSub(sm *Sub_map, id string) error {
 	if IsUserExist(sm.User_id, id) && IsSubExist(sm.Sub_id, id) {
 		sei := sei_msg.New()
 		defer sei.Refresh()
-		err := sei.DB(Config.MsgName).C(Config.SubsName).Remove(bson.M{"sub_id": sm.Sub_id, "user_id": sm.User_id})
-		if err != nil {
-			glog.Errorf("Remove the user(%v) from the sub(%v) error:%v\n", sm.User_id, sm.Sub_id, err)
-		}
-		return nil
+		return sei.DB(Config.MsgName).C(Config.SubsName).Remove(bson.M{"sub_id": sm.Sub_id, "user_id": sm.User_id})
 	}
 	return fmt.Errorf("sub(%v) or user(%v) of the id(%v) not exist", sm.Sub_id, sm.User_id, id)
 }

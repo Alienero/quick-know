@@ -52,10 +52,13 @@ func add_user(w http.ResponseWriter, r *http.Request, uu *user) {
 	}
 	u.Owner = uu.ID
 	u.Id = get_uuid()
-	store.AddUser(u)
-	io.WriteString(w, `{"id":"`)
-	io.WriteString(w, u.Id)
-	io.WriteString(w, `"}`)
+	if err := store.AddUser(u); err != nil {
+		badReaquest(w, `{"status":"fail"}`)
+	} else {
+		io.WriteString(w, `{"id":"`)
+		io.WriteString(w, u.Id)
+		io.WriteString(w, `"}`)
+	}
 }
 
 // Delete a user
@@ -86,11 +89,13 @@ func add_sub(w http.ResponseWriter, r *http.Request, uu *user) {
 	}
 	sub.Id = get_uuid()
 	sub.Own = uu.ID
-	store.AddSub(sub)
-	// Write the response
-	io.WriteString(w, `{"sub_id":"`)
-	io.WriteString(w, sub.Id)
-	io.WriteString(w, `"}`)
+	if err := store.AddSub(sub); err != nil {
+		badReaquest(w, `{"status":"fail"}`)
+	} else {
+		io.WriteString(w, `{"sub_id":"`)
+		io.WriteString(w, sub.Id)
+		io.WriteString(w, `"}`)
+	}
 }
 
 // Del sub msg
