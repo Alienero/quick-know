@@ -2,16 +2,18 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package store
+package mongodb
 
 import (
 	"fmt"
 
+	. "github.com/Alienero/quick-know/store/define"
+
 	"labix.org/v2/mgo/bson"
 )
 
-func Client_login(id, psw string) bool {
-	sei := sei_user.New()
+func (mongo *Mongodb) Client_login(id, psw string) bool {
+	sei := mongo.sei_user.New()
 	defer sei.Refresh()
 	c := sei.DB(Config.UserName).C(Config.Clients)
 	var u = new(User)
@@ -22,8 +24,8 @@ func Client_login(id, psw string) bool {
 	}
 	return true
 }
-func Ctrl_login(id, auth string) (bool, string) {
-	sei := sei_user.New()
+func (mongo *Mongodb) Ctrl_login(id, auth string) (bool, string) {
+	sei := mongo.sei_user.New()
 	defer sei.Refresh()
 	c := sei.DB(Config.UserName).C(Config.Ctrls)
 	var u = new(Ctrl)
@@ -36,26 +38,24 @@ func Ctrl_login(id, auth string) (bool, string) {
 	return true, u.Id
 }
 
-func Ctrl_login_alive(id, psw string) bool { return false }
-
 // Add or del user
-func AddUser(u *User) error {
-	sei := sei_user.New()
+func (mongo *Mongodb) AddUser(u *User) error {
+	sei := mongo.sei_user.New()
 	defer sei.Refresh()
 	c := sei.DB(Config.UserName).C(Config.Clients)
 	return c.Insert(u)
 }
-func DelUser(id string, own string) error {
-	if !IsUserExist(id, own) {
+func (mongo *Mongodb) DelUser(id string, own string) error {
+	if !mongo.IsUserExist(id, own) {
 		return fmt.Errorf("Del a user error:user not found,ID:%v,Own:%v", id, own)
 	}
-	sei_m := sei_msg.New()
+	sei_m := mongo.sei_msg.New()
 	defer sei_m.Refresh()
 	_, err := sei_m.DB(Config.MsgName).C(Config.SubsName).RemoveAll(bson.M{"user_id": id})
 	if err != nil {
 		return err
 	}
-	sei := sei_user.New()
+	sei := mongo.sei_user.New()
 	defer sei.Refresh()
 	c := sei.DB(Config.UserName).C(Config.Clients)
 	err = c.Remove(bson.M{"id": id, "owner": own})
@@ -65,8 +65,8 @@ func DelUser(id string, own string) error {
 	return nil
 }
 
-func IsUserExist(uid, oid string) bool {
-	sei := sei_user.New()
+func (mongo *Mongodb) IsUserExist(uid, oid string) bool {
+	sei := mongo.sei_user.New()
 	defer sei.Refresh()
 	u := new(User)
 	it := sei.DB(Config.UserName).C(Config.Clients).Find(bson.M{"id": uid, "owner": oid}).Iter()
@@ -75,10 +75,10 @@ func IsUserExist(uid, oid string) bool {
 }
 
 // Get the All use's id.
-func ChanUserID(own string) <-chan string {
+func (mongo *Mongodb) ChanUserID(own string) <-chan string {
 	ch := make(chan string, 100)
 	go func() {
-		sei := sei_user.New()
+		sei := mongo.sei_user.New()
 		it := sei.DB(Config.UserName).C(Config.Clients).Find(bson.M{"owner": own}).Iter()
 		u := new(User)
 		for it.Next(u) {

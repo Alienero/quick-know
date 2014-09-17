@@ -2,24 +2,26 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package store
+package mongodb
 
 import (
 	"fmt"
 
+	. "github.com/Alienero/quick-know/store/define"
+
 	"labix.org/v2/mgo/bson"
 )
 
-func AddSub(sub *Sub) error {
-	sei := sei_msg.New()
+func (mongo *Mongodb) AddSub(sub *Sub) error {
+	sei := mongo.sei_msg.New()
 	defer sei.Refresh()
 	c := sei.DB(Config.MsgName).C(Config.SubName)
 	return c.Insert(sub)
 }
 
-func DelSub(sub_id, id string) error {
-	if IsSubExist(sub_id, id) {
-		sei := sei_msg.New()
+func (mongo *Mongodb) DelSub(sub_id, id string) error {
+	if mongo.IsSubExist(sub_id, id) {
+		sei := mongo.sei_msg.New()
 		defer sei.Refresh()
 		c := sei.DB(Config.MsgName).C(Config.SubsName)
 		_, err := c.RemoveAll(bson.M{"sub_id": sub_id})
@@ -36,29 +38,29 @@ func DelSub(sub_id, id string) error {
 	return fmt.Errorf("the sub(%v) of the user(%v) is not exist", sub_id, id)
 }
 
-func AddUserToSub(sm *Sub_map, id string) error {
+func (mongo *Mongodb) AddUserToSub(sm *Sub_map, id string) error {
 	// Check the sub has been exist and belong to the use
-	sei := sei_msg.New()
+	sei := mongo.sei_msg.New()
 	defer sei.Refresh()
 
-	if IsSubExist(sm.Sub_id, id) && IsUserExist(sm.User_id, id) {
+	if mongo.IsSubExist(sm.Sub_id, id) && mongo.IsUserExist(sm.User_id, id) {
 		return sei.DB(Config.MsgName).C(Config.SubsName).Insert(sm)
 	} else {
 		return fmt.Errorf("sub(%v) or user(%v) of id(%v) not exist ", sm.Sub_id, sm.User_id, id)
 	}
 }
 
-func DelUserFromSub(sm *Sub_map, id string) error {
-	if IsUserExist(sm.User_id, id) && IsSubExist(sm.Sub_id, id) {
-		sei := sei_msg.New()
+func (mongo *Mongodb) DelUserFromSub(sm *Sub_map, id string) error {
+	if mongo.IsUserExist(sm.User_id, id) && mongo.IsSubExist(sm.Sub_id, id) {
+		sei := mongo.sei_msg.New()
 		defer sei.Refresh()
 		return sei.DB(Config.MsgName).C(Config.SubsName).Remove(bson.M{"sub_id": sm.Sub_id, "user_id": sm.User_id})
 	}
 	return fmt.Errorf("sub(%v) or user(%v) of the id(%v) not exist", sm.Sub_id, sm.User_id, id)
 }
 
-func IsSubExist(sub_id, id string) bool {
-	sei := sei_msg.New()
+func (mongo *Mongodb) IsSubExist(sub_id, id string) bool {
+	sei := mongo.sei_msg.New()
 	defer sei.Refresh()
 	it := sei.DB(Config.MsgName).C(Config.SubName).Find(bson.M{"id": sub_id, "own": id}).Iter()
 	defer it.Close()
@@ -66,11 +68,11 @@ func IsSubExist(sub_id, id string) bool {
 	return it.Next(sub)
 }
 
-func ChanSubUsers(sub_id string) <-chan string {
+func (mongo *Mongodb) ChanSubUsers(sub_id string) <-chan string {
 	ch := make(chan string, 100)
 
 	go func() {
-		sei := sei_msg.New()
+		sei := mongo.sei_msg.New()
 		it := sei.DB(Config.MsgName).C(Config.SubsName).Find(bson.M{"sub_id": sub_id}).Iter()
 		sm := new(Sub_map)
 		for it.Next(sm) {

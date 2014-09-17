@@ -2,26 +2,25 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package store
+package mongodb
 
 import (
+	. "github.com/Alienero/quick-know/store/define"
+
 	"labix.org/v2/mgo"
-	// "labix.org/v2/mgo/bson"
 )
 
-var sei_user *mgo.Session
-var sei_msg *mgo.Session
+type Mongodb struct {
+	sei_user *mgo.Session
+	sei_msg  *mgo.Session
+}
 
-func Init() (err error) {
-	err = initConfig()
-	if err != nil {
+func NewMongo() (mongo *Mongodb, err error) {
+	mongo = new(Mongodb)
+	if err = connect(&mongo.sei_user, Config.UserAddr); err != nil {
 		return
 	}
-	err = connect(&sei_user, Config.UserAddr)
-	if err != nil {
-		return
-	}
-	err = connect(&sei_msg, Config.MsgAddr)
+	err = connect(&mongo.sei_msg, Config.MsgAddr)
 	return
 }
 

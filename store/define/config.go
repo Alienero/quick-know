@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package store
+package define
 
 import (
 	"bufio"
@@ -15,6 +15,8 @@ import (
 var Config = new(config)
 
 type config struct {
+	DBType string
+
 	UserAddr string // DB addr
 	UserName string // Collection name
 	Clients  string
@@ -30,7 +32,7 @@ type config struct {
 	OfflineMsgs int // The max of the offline msgs
 }
 
-func initConfig() error {
+func InitConfig() error {
 	buf := new(bytes.Buffer)
 
 	f, err := os.Open("store.conf")

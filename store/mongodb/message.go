@@ -2,23 +2,25 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package store
+package mongodb
 
 import (
 	"time"
+
+	. "github.com/Alienero/quick-know/store/define"
 
 	"github.com/golang/glog"
 	"labix.org/v2/mgo/bson"
 )
 
 // id is to_id (client id)
-func GetOfflineMsg(id string, fin <-chan byte) (<-chan *Msg, <-chan byte) {
+func (mongo *Mongodb) GetOfflineMsg(id string, fin <-chan byte) (<-chan *Msg, <-chan byte) {
 	// defer recover()
 	// Find in the db
 	ch := make(chan *Msg, Config.OfflineMsgs)
 	ch2 := make(chan byte, 1)
 	go func() {
-		sei := sei_msg.New()
+		sei := mongo.sei_msg.New()
 		c := sei.DB(Config.MsgName).C(Config.OfflineName)
 		iter := c.Find(bson.M{"to_id": id}).Limit(Config.OfflineMsgs).Iter()
 		msg := new(Msg)
@@ -29,7 +31,7 @@ func GetOfflineMsg(id string, fin <-chan byte) (<-chan *Msg, <-chan byte) {
 			if msg.Expired > 0 {
 				if time.Now().UTC().Unix() > msg.Expired {
 					// Delet the offline msg in the BD
-					DelOfflineMsg(msg.Msg_id, id)
+					mongo.DelOfflineMsg(msg.Msg_id, id)
 					continue
 				}
 			}
@@ -58,9 +60,9 @@ func GetOfflineMsg(id string, fin <-chan byte) (<-chan *Msg, <-chan byte) {
 	return ch, ch2
 }
 
-func GetOfflineCount(id string) (int, error) {
-	c := sei_msg.DB(Config.MsgName).C(Config.OfflineName)
-	defer sei_msg.Refresh()
+func (mongo *Mongodb) GetOfflineCount(id string) (int, error) {
+	c := mongo.sei_msg.DB(Config.MsgName).C(Config.OfflineName)
+	defer mongo.sei_msg.Refresh()
 	msg := new(Msg)
 	if err := c.Find(bson.M{"to_id": id}).Sort("msg_id", "-1").One(&msg); err != nil {
 		return 0, err
@@ -69,9 +71,9 @@ func GetOfflineCount(id string) (int, error) {
 }
 
 // Del the offile msg
-func DelOfflineMsg(msg_id int, id string) {
-	c := sei_msg.DB(Config.MsgName).C(Config.OfflineName)
-	defer sei_msg.Refresh()
+func (mongo *Mongodb) DelOfflineMsg(msg_id int, id string) {
+	c := mongo.sei_msg.DB(Config.MsgName).C(Config.OfflineName)
+	defer mongo.sei_msg.Refresh()
 	err := c.Remove(bson.M{"msg_id": msg_id, "to_id": id})
 	if err != nil {
 		glog.Errorf("Remove a offline msg(id:%v,to_id:%v) error:%v", msg_id, id, err)
@@ -80,9 +82,9 @@ func DelOfflineMsg(msg_id int, id string) {
 
 // Intert a new offilne msg
 // Before should check the to_id belong the user
-func InsertOfflineMsg(msg *Msg) {
-	c := sei_msg.DB(Config.MsgName).C(Config.OfflineName)
-	defer sei_msg.Refresh()
+func (mongo *Mongodb) InsertOfflineMsg(msg *Msg) {
+	c := mongo.sei_msg.DB(Config.MsgName).C(Config.OfflineName)
+	defer mongo.sei_msg.Refresh()
 	err := c.Insert(msg)
 	if err != nil {
 		glog.Errorf("Intert a offline msg(id:%v) error:%v", msg.Msg_id)
