@@ -6,10 +6,25 @@ package mongodb
 
 import (
 	"fmt"
+	"log"
 	"testing"
+
+	"github.com/Alienero/quick-know/store/define"
 
 	"labix.org/v2/mgo/bson"
 )
+
+var db *Mongodb
+
+func init() {
+	var err error
+	if err = define.InitConfig(); errr != nil {
+		log.Fatalf("init test error:%v", err)
+	}
+	if db, errr = NewMongo(); err != nil {
+		log.Fatalf("init test error:%v", err)
+	}
+}
 
 func insertAdmin() {
 	u := &Ctrl{"1234", "10086"}

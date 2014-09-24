@@ -116,7 +116,7 @@ func login(r *bufio.Reader, w *bufio.Writer, conn net.Conn, typ int) (l listener
 
 	switch typ {
 	case CLIENT:
-		if !store.Client_login(*id, *psw) {
+		if !store.Manager.Client_login(*id, *psw) {
 			err = fmt.Errorf("Client Authentication is not passed id:%v,psw:%v", *id, *psw)
 			break
 		}
@@ -145,15 +145,7 @@ func login(r *bufio.Reader, w *bufio.Writer, conn net.Conn, typ int) (l listener
 		Users.Set(*id, c)
 		l = c
 	case CSERVER:
-		// TODO : Base64
-		if !store.Ctrl_login_alive(*id, *psw) {
-			err = fmt.Errorf("Client Authentication is not passed id:%v,psw:%v", *id, *psw)
-			break
-		}
 		// TODO
-		// cs := newCServer(rw, req.Id)
-		// ctrls.Set(*id, cs)
-		// l = cs
 	default:
 		fmt.Errorf("No such pack type :%v", typ)
 	}

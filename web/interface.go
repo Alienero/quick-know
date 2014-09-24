@@ -61,7 +61,7 @@ func (h *handle) prepare(w http.ResponseWriter, r *http.Request, u *user) {
 		glog.Error("auth basic string out of range")
 		return
 	}
-	if b, id := store.Ctrl_login(kp[:index], kp[index+1:]); !b {
+	if b, id := store.Manager.Ctrl_login(kp[:index], kp[index+1:]); !b {
 		u.isBreak = true
 	} else {
 		u.ID = id

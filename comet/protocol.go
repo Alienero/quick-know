@@ -8,7 +8,7 @@ import (
 	// "bytes"
 	"encoding/json"
 
-	"github.com/Alienero/quick-know/store"
+	"github.com/Alienero/quick-know/store/define"
 )
 
 // Socket protocol
@@ -101,10 +101,10 @@ type user_msg struct {
 	Typ    int
 }
 
-func getMsg(msg *store.Msg) ([]byte, error) {
+func getMsg(msg *define.Msg) ([]byte, error) {
 	return marshalJson(getUserMsg(msg))
 }
-func getUserMsg(msg *store.Msg) *user_msg {
+func getUserMsg(msg *define.Msg) *user_msg {
 	return &user_msg{
 		Body:   msg.Body,
 		Msg_id: msg.Msg_id,

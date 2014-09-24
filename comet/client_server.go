@@ -13,9 +13,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Alienero/quick-know/store"
-	// "github.com/Alienero/spp"
 	"github.com/Alienero/quick-know/mqtt"
+	"github.com/Alienero/quick-know/store"
+	"github.com/Alienero/quick-know/store/define"
 
 	"github.com/golang/glog"
 )
@@ -26,11 +26,11 @@ type client struct {
 	queue *PackQueue
 	id    string
 
-	offlines <-chan *store.Msg
-	onlines  chan *store.Msg
+	offlines <-chan *define.Msg
+	onlines  chan *define.Msg
 	readChan <-chan *packAndErr
 
-	onlineCache map[int]*store.Msg
+	onlineCache map[int]*define.Msg
 	offlineNum  int
 
 	CloseChan   chan byte // Other gorountine Call notice exit
@@ -59,10 +59,10 @@ func newClient(r *bufio.Reader, w *bufio.Writer, conn net.Conn, id string, alive
 		CloseChan: make(chan byte),
 		lock:      new(sync.Mutex),
 
-		offlines: make(chan *store.Msg, Conf.MaxCacheMsg),
-		onlines:  make(chan *store.Msg, Conf.MaxCacheMsg),
+		offlines: make(chan *define.Msg, Conf.MaxCacheMsg),
+		onlines:  make(chan *define.Msg, Conf.MaxCacheMsg),
 
-		onlineCache: make(map[int]*store.Msg),
+		onlineCache: make(map[int]*define.Msg),
 
 		curr_id: -1,
 		m:       65536,
@@ -77,7 +77,7 @@ func (c *client) listen_loop() (e error) {
 	defer Users.Del(c.id)
 	var (
 		err     error
-		msg     *store.Msg
+		msg     *define.Msg
 		pAndErr *packAndErr
 
 		noticeFin = make(chan byte)
@@ -88,7 +88,7 @@ func (c *client) listen_loop() (e error) {
 	// Start the write queue
 	go c.queue.writeLoop()
 
-	c.offlines, findEndChan = store.GetOfflineMsg(c.id, noticeFin)
+	c.offlines, findEndChan = store.Manager.GetOfflineMsg(c.id, noticeFin)
 	c.readChan = c.queue.ReadPackInLoop(noticeFin)
 
 	// Start push
@@ -202,7 +202,7 @@ loop:
 		// Add the offline msg id
 		v.Msg_id = i
 		v.Typ = OFFLINE
-		store.InsertOfflineMsg(v)
+		store.Manager.InsertOfflineMsg(v)
 		if i++; i > math.MaxUint16 {
 			break
 		}
@@ -248,7 +248,7 @@ func (c *client) getOnlineMsgId() int {
 	}
 }
 
-func (c *client) pushMsg(msg *store.Msg) error {
+func (c *client) pushMsg(msg *define.Msg) error {
 	pack := mqtt.GetPubPack(1, msg.Dup, msg.Msg_id, &msg.Topic, msg.Body)
 	// Write this pack
 	err := c.queue.WritePack(pack)
@@ -260,7 +260,7 @@ func (c *client) delMsg(typ int, msg_id int) {
 	case OFFLINE:
 		// Del the offline msg in the store
 		glog.Info("Del a offline msg")
-		store.DelOfflineMsg(msg_id, c.id)
+		store.Manager.DelOfflineMsg(msg_id, c.id)
 	case ONLINE:
 		// Del the online msg in the msg cache
 		glog.Infof("Del a online msg id:%v", msg_id)
@@ -270,7 +270,7 @@ func (c *client) delMsg(typ int, msg_id int) {
 	}
 }
 
-func (c *client) pushOfflineMsg(msg *store.Msg) (err error) {
+func (c *client) pushOfflineMsg(msg *define.Msg) (err error) {
 	// The max cache size is 20
 	if c.isOfflineClose && msg == nil {
 		// Send
@@ -292,7 +292,7 @@ func (c *client) pushOfflineMsg(msg *store.Msg) (err error) {
 	return
 }
 
-func WriteOnlineMsg(msg *store.Msg) {
+func WriteOnlineMsg(msg *define.Msg) {
 	msg.Dup = 0
 	// fix the Expired
 	if msg.Expired > 0 {
@@ -309,7 +309,7 @@ func WriteOnlineMsg(msg *store.Msg) {
 			return
 		}
 		msg.Msg_id = i
-		store.InsertOfflineMsg(msg)
+		store.Manager.InsertOfflineMsg(msg)
 		return
 	}
 
@@ -322,7 +322,7 @@ func WriteOnlineMsg(msg *store.Msg) {
 		}
 		msg.Msg_id = i
 		msg.Typ = OFFLINE
-		store.InsertOfflineMsg(msg)
+		store.Manager.InsertOfflineMsg(msg)
 		c.lock.Unlock()
 		return
 	}
@@ -335,7 +335,7 @@ func WriteOnlineMsg(msg *store.Msg) {
 		}
 		msg.Msg_id = i
 		msg.Typ = OFFLINE
-		store.InsertOfflineMsg(msg)
+		store.Manager.InsertOfflineMsg(msg)
 	} else {
 		msg.Typ = ONLINE
 		c.onlines <- msg
@@ -344,7 +344,7 @@ func WriteOnlineMsg(msg *store.Msg) {
 }
 
 func getOfflineId(id string) (int, error) {
-	i, err := store.GetOfflineCount(id)
+	i, err := store.Manager.GetOfflineCount(id)
 	if err != nil {
 		i = math.MaxInt16
 	}
