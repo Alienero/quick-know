@@ -45,11 +45,6 @@ type client struct {
 
 	// Online msg id
 	curr_id int
-	m       int // Residue msgs' ids
-
-	// Offline msg id
-	curr_offline int
-	n            int
 }
 
 func newClient(r *bufio.Reader, w *bufio.Writer, conn net.Conn, id string, alive int) *client {
@@ -64,11 +59,7 @@ func newClient(r *bufio.Reader, w *bufio.Writer, conn net.Conn, id string, alive
 
 		onlineCache: make(map[int]*define.Msg),
 
-		curr_id: -1,
-		m:       65536,
-
-		curr_offline: 65535,
-		n:            65536,
+		curr_id: 0,
 	}
 }
 
@@ -225,24 +216,15 @@ passInsertOffline:
 // Setting a mqtt pack's id.
 func (c *client) getOnlineMsgId() int {
 	if c.curr_id == math.MaxInt16 {
-		i := 1
-		for i < math.MaxInt16+1-len(c.onlineCache) {
-			if m := c.onlineCache[i]; m == nil {
-				c.curr_id = i
-				return c.curr_id
-			}
-			i++
+		if c.onlineCache[1] == nil {
+			c.curr_id = 1
+			return c.curr_id
 		}
 		return -1
 	} else {
-		c.curr_id++
-		id := c.curr_id
-		for i := 0; i < math.MaxInt16-c.curr_id; i++ {
-			id++
-			if m := c.onlineCache[id]; m == nil {
-				c.curr_id = id
-				return c.curr_id
-			}
+		if id := c.curr_id + 1; c.onlineCache[id] == nil {
+			c.curr_id = id
+			return c.curr_id
 		}
 		return -1
 	}
