@@ -4,6 +4,12 @@
 
 package define
 
+import (
+	"strconv"
+	"sync"
+	"time"
+)
+
 type Msg struct {
 	Msg_id int    // Msg ID
 	Owner  string // Owner
@@ -15,6 +21,11 @@ type Msg struct {
 	Dup byte // mqtt dup
 
 	Expired int64
+}
+
+type Msg_id struct {
+	Id string
+	M  *Msg
 }
 
 type User struct {
@@ -39,4 +50,12 @@ type Sub struct {
 type Sub_map struct {
 	Sub_id  string
 	User_id string
+}
+
+var lock = new(sync.Mutex)
+
+func Get_uuid() string {
+	lock.Lock()
+	defer lock.Unlock()
+	return strconv.FormatInt(time.Now().UTC().UnixNano(), 36)
 }

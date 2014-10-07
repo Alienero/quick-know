@@ -124,19 +124,21 @@ func login(r *bufio.Reader, w *bufio.Writer, conn net.Conn, typ int) (l listener
 		if tc := Users.Get(*id); tc != nil {
 			tc.lock.Lock()
 			if !tc.isLetClose {
+				tc.isLetClose = true
 				tc.lock.Unlock()
 				select {
 				case tc.CloseChan <- 1:
-					tc.lock.Lock()
-					tc.isLetClose = true
-					tc.lock.Unlock()
 					<-tc.CloseChan
-				case <-time.After(3 * time.Second):
+				case <-time.After(2 * time.Second):
+					// Timeout.
 					if tc := Users.Get(*id); tc != nil {
 						return nil, errors.New("Close the logon user timeout")
 					}
+					// Has been esc.
+					// Create a new Clinet online.
 				}
 			} else {
+				tc.lock.Unlock()
 				return nil, errors.New("Has been relogining")
 			}
 

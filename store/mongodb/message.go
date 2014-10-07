@@ -5,39 +5,31 @@
 package mongodb
 
 import (
-	"time"
+	"fmt"
 
 	. "github.com/Alienero/quick-know/store/define"
 
-	"github.com/golang/glog"
 	"labix.org/v2/mgo/bson"
 )
 
 // id is to_id (client id)
-func (mongo *Mongodb) GetOfflineMsg(id string, fin <-chan byte) (<-chan *Msg, <-chan byte) {
+func (mongo *Mongodb) GetOfflineMsg(id string, fin <-chan byte) (<-chan *Msg_id, <-chan byte) {
 	// defer recover()
 	// Find in the db
-	ch := make(chan *Msg, Config.OfflineMsgs)
+	ch := make(chan *Msg_id, Config.OfflineMsgs)
 	ch2 := make(chan byte, 1)
 	go func() {
 		sei := mongo.sei_msg.New()
 		c := sei.DB(Config.MsgName).C(Config.OfflineName)
 		iter := c.Find(bson.M{"to_id": id}).Limit(Config.OfflineMsgs).Iter()
-		msg := new(Msg)
+		msg_id := new(Msg_id)
 		flag := false
 		// Check time expired
 	loop:
-		for iter.Next(msg) {
-			if msg.Expired > 0 {
-				if time.Now().UTC().Unix() > msg.Expired {
-					// Delet the offline msg in the BD
-					mongo.DelOfflineMsg(msg.Msg_id, id)
-					continue
-				}
-			}
+		for iter.Next(msg_id) {
 			select {
-			case ch <- msg:
-				msg = new(Msg)
+			case ch <- msg_id:
+				msg_id = new(Msg_id)
 			case <-fin:
 				// No read the all offline msg, notice close
 				flag = true
@@ -71,22 +63,28 @@ func (mongo *Mongodb) GetOfflineCount(id string) (int, error) {
 }
 
 // Del the offile msg
-func (mongo *Mongodb) DelOfflineMsg(msg_id int, id string) {
+func (mongo *Mongodb) DelOfflineMsg(id string) error {
 	c := mongo.sei_msg.DB(Config.MsgName).C(Config.OfflineName)
 	defer mongo.sei_msg.Refresh()
-	err := c.Remove(bson.M{"msg_id": msg_id, "to_id": id})
+	err := c.Remove(bson.M{"id": id})
 	if err != nil {
-		glog.Errorf("Remove a offline msg(id:%v,to_id:%v) error:%v", msg_id, id, err)
+		return fmt.Errorf("Remove a offline msg(id:%v) error:%v", id, err)
 	}
+	return nil
 }
 
 // Intert a new offilne msg
 // Before should check the to_id belong the user
-func (mongo *Mongodb) InsertOfflineMsg(msg *Msg) {
+func (mongo *Mongodb) InsertOfflineMsg(msg *Msg) error {
 	c := mongo.sei_msg.DB(Config.MsgName).C(Config.OfflineName)
 	defer mongo.sei_msg.Refresh()
-	err := c.Insert(msg)
+	id := Get_uuid()
+	err := c.Insert(&Msg_id{
+		M:  msg,
+		Id: id,
+	})
 	if err != nil {
-		glog.Errorf("Intert a offline msg(id:%v) error:%v", msg.Msg_id)
+		return fmt.Errorf("Intert a offline msg(id:%v) error:%v", id)
 	}
+	return nil
 }

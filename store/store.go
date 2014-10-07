@@ -18,13 +18,13 @@ type DataStorer interface {
 	// Msg's methods.
 
 	// Get the offline msg from the database which you choosed.
-	GetOfflineMsg(id string, fin <-chan byte) (<-chan *Msg, <-chan byte)
+	GetOfflineMsg(id string, fin <-chan byte) (<-chan *Msg_id, <-chan byte)
 	// Get the muber of the offline msgs.
 	GetOfflineCount(id string) (int, error)
 	// Delete the offline msg.
-	DelOfflineMsg(msg_id int, id string)
+	DelOfflineMsg(id string) error
 	// Insert a msg to the database.
-	InsertOfflineMsg(msg *Msg)
+	InsertOfflineMsg(msg *Msg) error
 
 	// User
 

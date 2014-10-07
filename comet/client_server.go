@@ -26,25 +26,27 @@ type client struct {
 	queue *PackQueue
 	id    string
 
-	offlines <-chan *define.Msg
+	offlines <-chan *define.Msg_id
 	onlines  chan *define.Msg
 	readChan <-chan *packAndErr
 
 	onlineCache map[int]*define.Msg
-	offlineNum  int
+	offlineNum  int // The max of once send the offline msgs.
+	offline_map map[int]string
 
 	CloseChan   chan byte // Other gorountine Call notice exit
-	isSendClose bool
+	isSendClose bool      // Wheather has a new login user.
+	isLetClose  bool
 
 	isStop bool
 	lock   *sync.Mutex
-
-	isLetClose bool
 
 	isOfflineClose bool // Is offlines chan has been close
 
 	// Online msg id
 	curr_id int
+	// The all not check msgs's number.
+	counter int
 }
 
 func newClient(r *bufio.Reader, w *bufio.Writer, conn net.Conn, id string, alive int) *client {
@@ -54,8 +56,9 @@ func newClient(r *bufio.Reader, w *bufio.Writer, conn net.Conn, id string, alive
 		CloseChan: make(chan byte),
 		lock:      new(sync.Mutex),
 
-		offlines: make(chan *define.Msg, Conf.MaxCacheMsg),
-		onlines:  make(chan *define.Msg, Conf.MaxCacheMsg),
+		offlines:    make(chan *define.Msg_id, Conf.MaxCacheMsg),
+		onlines:     make(chan *define.Msg, Conf.MaxCacheMsg),
+		offline_map: make(map[int]string),
 
 		onlineCache: make(map[int]*define.Msg),
 
@@ -85,98 +88,50 @@ func (c *client) listen_loop() (e error) {
 	// Start push
 loop:
 	for {
-		select {
-		case <-findEndChan:
-			glog.Info("Offline has been finish send.")
-			c.isOfflineClose = true
-			if err = c.pushOfflineMsg(nil); err != nil {
-				break loop
-			}
-			break
-		case msg = <-c.offlines:
-			// Push the offline msg
-			glog.Info("Get a offline msg")
-			// Set the msg id
-			err = c.pushOfflineMsg(msg)
-			if err != nil {
-				break loop
-			}
-
-		case msg = <-c.onlines:
-			// Push the online msg
-			glog.Info("Get a online msg")
-			// Check the msg time
-			if msg.Expired > 0 {
-				if time.Now().UTC().Unix() > msg.Expired {
-					// cancel send the msg
-					glog.Info("Out of time")
-					break
-				}
-			}
-			// Add the msg into cache
-			if msg == nil {
-				glog.Warning("onlines has been close")
-				break loop
-			}
-			if len(c.onlineCache) > Conf.MaxCacheMsg && Conf.MaxCacheMsg != 0 {
-				err = fmt.Errorf("Online msg is out of range:%v", len(c.onlineCache))
-				break loop
-			}
-			mid := c.getOnlineMsgId()
-			if mid == -1 {
-				break
-			}
-			msg.Msg_id = mid
-			msg.Typ = ONLINE
-			c.onlineCache[msg.Msg_id] = msg
-			err = c.pushMsg(msg)
-			if err != nil {
-				break loop
-			}
-		case pAndErr = <-c.readChan:
-			// If connetion has a error, should break
-			// if it return a timeout error, illustrate
-			// hava not recive a heart beat pack at an
-			// given time.
-			if pAndErr.err != nil {
-				glog.Infof("Get a connection error , will break(%v)", pAndErr.err)
-				err = pAndErr.err
-				break loop
-			}
-			glog.Infof("Client msg(%v)\n", pAndErr.pack.GetType())
-
-			// Choose the requst type
-			switch pAndErr.pack.GetType() {
-			case mqtt.PUBACK:
-				ack := pAndErr.pack.GetVariable().(*mqtt.Puback)
-
-				if ack.GetMid() > math.MaxInt16 {
-					c.delMsg(OFFLINE, ack.GetMid())
-				} else {
-					// Online msg
-					c.delMsg(ONLINE, ack.GetMid())
-				}
-
-			case mqtt.PINGREQ:
-				// Reply the heart beat
-				glog.Info("hb msg")
-				err = c.queue.WritePack(mqtt.GetPingResp(1, pAndErr.pack.GetDup()))
-				if err != nil {
+		if c.counter < math.MaxUint16 {
+			select {
+			case <-findEndChan:
+				if err = c.offlineEnd(); err != nil {
+					glog.Error(err)
 					break loop
 				}
-			default:
-				// Not define pack type
-				glog.Errorf("The type not define:%v\n", pAndErr.pack.GetType())
+			case msg_id := <-c.offlines:
+				if err = c.waitOffline(msg_id); err != nil {
+					glog.Error(err)
+					break loop
+				}
+			case msg = <-c.onlines:
+				if err = c.waitOnline(msg); err != nil {
+					glog.Error(err)
+					break loop
+				}
+			case pAndErr = <-c.readChan:
+				if err = c.waitPack(pAndErr); err != nil {
+					glog.Error(err)
+					break loop
+				}
+			case <-c.CloseChan:
+				c.waitQuit()
+				break loop
 			}
-		case <-c.CloseChan:
-			// Start close
-			glog.Info("Will break new relogin")
-			c.isSendClose = true
-			break loop
-
+		} else {
+			select {
+			case pAndErr = <-c.readChan:
+				if err = c.waitPack(pAndErr); err != nil {
+					glog.Error(err)
+					break loop
+				}
+			case <-c.CloseChan:
+				c.waitQuit()
+				break loop
+			}
 		}
+
 	}
 
+	c.lock.Lock()
+	c.isStop = true
+	c.lock.Unlock()
 	// Wrte the onlines msg to the db
 	// Free resources
 	// Close channels
@@ -184,27 +139,19 @@ loop:
 		noticeFin <- 1
 	}
 	// Write the onlines msg to the db
-	i, err := getOfflineId(c.id)
-	if err != nil {
-		glog.Errorf("Get offline msg error:%v", err)
-		goto passInsertOffline
-	}
 	for _, v := range c.onlineCache {
 		// Add the offline msg id
-		v.Msg_id = i
 		v.Typ = OFFLINE
 		store.Manager.InsertOfflineMsg(v)
-		if i++; i > math.MaxUint16 {
-			break
-		}
 	}
-
-passInsertOffline:
+	// Flush the channel.
+	for len(c.onlines) > 0 {
+		msg := <-c.onlines
+		msg.Typ = OFFLINE
+		store.Manager.InsertOfflineMsg(msg)
+	}
 	// Close the online msg channel
-	c.lock.Lock()
-	c.isStop = true
 	close(c.onlines)
-	c.lock.Unlock()
 	if c.isSendClose {
 		c.CloseChan <- 0
 	}
@@ -213,9 +160,17 @@ passInsertOffline:
 	return
 }
 
+// Select methods.
+func (c *client) offlineEnd() (err error) {
+	glog.Info("Offline has been finish send.")
+	c.isOfflineClose = true
+	err = c.pushOfflineMsg(nil)
+	return
+}
+
 // Setting a mqtt pack's id.
 func (c *client) getOnlineMsgId() int {
-	if c.curr_id == math.MaxInt16 {
+	if c.curr_id == math.MaxUint16 {
 		if c.onlineCache[1] == nil {
 			c.curr_id = 1
 			return c.curr_id
@@ -230,6 +185,99 @@ func (c *client) getOnlineMsgId() int {
 	}
 }
 
+func (c *client) waitOffline(msg_id *define.Msg_id) (err error) {
+	msg := msg_id.M
+	// Check the msg time
+	if msg.Expired > 0 {
+		if time.Now().UTC().Unix() > msg.Expired {
+			// cancel send the msg
+			glog.Info("Out of time.")
+			// TODO Del the offline msg
+			store.Manager.DelOfflineMsg(msg_id.Id)
+			return
+		}
+	}
+	msg.Msg_id = c.getOnlineMsgId()
+	if msg.Msg_id == -1 {
+		return
+	}
+	c.offline_map[msg.Msg_id] = msg_id.Id
+	// Push the offline msg
+	glog.Info("Get a offline msg")
+	// Set the msg id
+	err = c.pushOfflineMsg(msg)
+	c.counter++
+	return
+}
+
+func (c *client) waitOnline(msg *define.Msg) (err error) {
+	// Push the online msg
+	glog.Info("Get a online msg")
+	// Check the msg time
+	if msg.Expired > 0 {
+		if time.Now().UTC().Unix() > msg.Expired {
+			// cancel send the msg
+			glog.Info("Out of time")
+			return
+		}
+	}
+	// Add the msg into cache
+	if msg == nil {
+		err = errors.New("onlines has been close")
+		return
+	}
+	if len(c.onlineCache) > Conf.MaxCacheMsg && Conf.MaxCacheMsg != 0 {
+		err = fmt.Errorf("Online msg is out of range:%v", len(c.onlineCache))
+		return
+	}
+	mid := c.getOnlineMsgId()
+	if mid == -1 {
+		return
+	}
+	msg.Msg_id = mid
+	msg.Typ = ONLINE
+	c.onlineCache[msg.Msg_id] = msg
+	err = c.pushMsg(msg)
+	c.counter++
+	return
+}
+
+func (c *client) waitPack(pAndErr *packAndErr) (err error) {
+	// If connetion has a error, should break
+	// if it return a timeout error, illustrate
+	// hava not recive a heart beat pack at an
+	// given time.
+	if pAndErr.err != nil {
+		glog.Infof("Get a connection error , will break(%v)", pAndErr.err)
+		err = pAndErr.err
+		return
+	}
+	glog.Infof("Client msg(%v)\n", pAndErr.pack.GetType())
+
+	// Choose the requst type
+	switch pAndErr.pack.GetType() {
+	case mqtt.PUBACK:
+		ack := pAndErr.pack.GetVariable().(*mqtt.Puback)
+		// Del the msg
+		c.delMsg(ack.GetMid())
+
+	case mqtt.PINGREQ:
+		// Reply the heart beat
+		glog.Info("hb msg")
+		err = c.queue.WritePack(mqtt.GetPingResp(1, pAndErr.pack.GetDup()))
+	default:
+		// Not define pack type
+		err = fmt.Errorf("The type not define:%v\n", pAndErr.pack.GetType())
+	}
+	return
+}
+
+func (c *client) waitQuit() {
+	// Start close
+	glog.Info("Will break new relogin")
+	c.isSendClose = true
+}
+
 func (c *client) pushMsg(msg *define.Msg) error {
 	pack := mqtt.GetPubPack(1, msg.Dup, msg.Msg_id, &msg.Topic, msg.Body)
 	// Write this pack
@@ -237,18 +285,18 @@ func (c *client) pushMsg(msg *define.Msg) error {
 	return err
 }
 
-func (c *client) delMsg(typ int, msg_id int) {
-	switch typ {
-	case OFFLINE:
-		// Del the offline msg in the store
-		glog.Info("Del a offline msg")
-		store.Manager.DelOfflineMsg(msg_id, c.id)
-	case ONLINE:
+func (c *client) delMsg(msg_id int) {
+	if c.onlineCache[msg_id] != nil {
 		// Del the online msg in the msg cache
 		glog.Infof("Del a online msg id:%v", msg_id)
 		delete(c.onlineCache, msg_id)
-	default:
-		glog.Errorf("No define the type:%v", typ)
+		c.counter--
+	} else if c.offline_map[msg_id] != "" {
+		// Del the offline msg in the store
+		glog.Info("Del a offline msg")
+		delete(c.offline_map, msg_id)
+		store.Manager.DelOfflineMsg(c.offline_map[msg_id])
+		c.counter--
 	}
 }
 
@@ -285,37 +333,20 @@ func WriteOnlineMsg(msg *define.Msg) {
 	if c == nil {
 		msg.Typ = OFFLINE
 		// Get the offline msg id
-		i, err := getOfflineId(msg.To_id)
-		if err != nil {
-			glog.Errorf("get offline msg id error:%v", err)
-			return
-		}
-		msg.Msg_id = i
 		store.Manager.InsertOfflineMsg(msg)
 		return
 	}
 
 	c.lock.Lock()
 	if len(c.onlines) == Conf.MaxCacheMsg {
-		i, err := getOfflineId(msg.To_id)
-		if err != nil {
-			glog.Errorf("get offline msg id error:%v", err)
-			return
-		}
-		msg.Msg_id = i
+		c.lock.Unlock()
 		msg.Typ = OFFLINE
 		store.Manager.InsertOfflineMsg(msg)
-		c.lock.Unlock()
 		return
 	}
+	c.lock.Lock()
 	if c.isStop {
 		c.lock.Unlock()
-		i, err := getOfflineId(msg.To_id)
-		if err != nil {
-			glog.Errorf("get offline msg id error:%v", err)
-			return
-		}
-		msg.Msg_id = i
 		msg.Typ = OFFLINE
 		store.Manager.InsertOfflineMsg(msg)
 	} else {
@@ -325,17 +356,17 @@ func WriteOnlineMsg(msg *define.Msg) {
 	}
 }
 
-func getOfflineId(id string) (int, error) {
-	i, err := store.Manager.GetOfflineCount(id)
-	if err != nil {
-		i = math.MaxInt16
-	}
-	if i < 1 {
-		i = math.MaxInt16
-	}
-	if i == math.MaxUint16 {
-		glog.Info("Give up the offline msg")
-		return 0, errors.New("i == MaxUnit16")
-	}
-	return i + 1, nil
-}
+// func getOfflineId(id string) (int, error) {
+// 	i, err := store.Manager.GetOfflineCount(id)
+// 	if err != nil {
+// 		i = math.MaxInt16
+// 	}
+// 	if i < 1 {
+// 		i = math.MaxInt16
+// 	}
+// 	if i == math.MaxUint16 {
+// 		glog.Info("Give up the offline msg")
+// 		return 0, errors.New("i == MaxUnit16")
+// 	}
+// 	return i + 1, nil
+// }
