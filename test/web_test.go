@@ -8,11 +8,11 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/Alienero/quick-know/store"
+	"github.com/Alienero/quick-know/store/define"
 )
 
 func TestPrivateMsg(t *testing.T) {
-	u := &store.Msg{Body: []byte("这是离线消息2"), To_id: "29d2b76f47e4f2e36e732a53c74e2731"}
+	u := &define.Msg{Body: []byte("这是离线消息1"), To_id: "apq5y6w9stc4"}
 	data, err := json.Marshal(u)
 	if err != nil {
 		t.Error(err)
@@ -25,7 +25,7 @@ func TestPrivateMsg(t *testing.T) {
 		return
 	}
 	c := new(http.Client)
-	str := base64.StdEncoding.EncodeToString([]byte("615582195:1"))
+	str := base64.StdEncoding.EncodeToString([]byte("1234:10086"))
 	// req.SetBasicAuth("username", "password")
 
 	req.Header.Add("Authorization", " Basic "+str)

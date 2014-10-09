@@ -21,10 +21,9 @@ func (mongo *Mongodb) GetOfflineMsg(id string, fin <-chan byte) (<-chan *Msg_id,
 	go func() {
 		sei := mongo.sei_msg.New()
 		c := sei.DB(Config.MsgName).C(Config.OfflineName)
-		iter := c.Find(bson.M{"to_id": id}).Limit(Config.OfflineMsgs).Iter()
+		iter := c.Find(bson.M{"m.to_id": id}).Limit(Config.OfflineMsgs).Iter()
 		msg_id := new(Msg_id)
 		flag := false
-		// Check time expired
 	loop:
 		for iter.Next(msg_id) {
 			select {
@@ -37,7 +36,6 @@ func (mongo *Mongodb) GetOfflineMsg(id string, fin <-chan byte) (<-chan *Msg_id,
 			}
 
 		}
-
 		iter.Close()
 		sei.Refresh()
 
@@ -52,6 +50,7 @@ func (mongo *Mongodb) GetOfflineMsg(id string, fin <-chan byte) (<-chan *Msg_id,
 	return ch, ch2
 }
 
+// Should delete.
 func (mongo *Mongodb) GetOfflineCount(id string) (int, error) {
 	c := mongo.sei_msg.DB(Config.MsgName).C(Config.OfflineName)
 	defer mongo.sei_msg.Refresh()

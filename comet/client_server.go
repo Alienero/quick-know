@@ -294,8 +294,10 @@ func (c *client) delMsg(msg_id int) {
 	} else if c.offline_map[msg_id] != "" {
 		// Del the offline msg in the store
 		glog.Info("Del a offline msg")
+		if err := store.Manager.DelOfflineMsg(c.offline_map[msg_id]); err != nil {
+			glog.Error(err)
+		}
 		delete(c.offline_map, msg_id)
-		store.Manager.DelOfflineMsg(c.offline_map[msg_id])
 		c.counter--
 	}
 }
@@ -343,6 +345,8 @@ func WriteOnlineMsg(msg *define.Msg) {
 		msg.Typ = OFFLINE
 		store.Manager.InsertOfflineMsg(msg)
 		return
+	} else {
+		c.lock.Unlock()
 	}
 	c.lock.Lock()
 	if c.isStop {

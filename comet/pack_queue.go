@@ -47,6 +47,7 @@ func NewPackQueue(r *bufio.Reader, w *bufio.Writer, conn net.Conn, alive int) *P
 	if alive < 1 {
 		alive = Conf.ReadTimeout
 	}
+	alive = int(float32(alive)*1.5 + 1)
 	return &PackQueue{
 		alive:     alive,
 		r:         r,
