@@ -10,7 +10,6 @@ import (
 	"net"
 	"time"
 
-	// "github.com/Alienero/spp"
 	"github.com/Alienero/quick-know/mqtt"
 )
 
@@ -31,12 +30,19 @@ type PackQueue struct {
 
 	alive int
 }
+
 type packAndErr struct {
 	pack *mqtt.Pack
 	err  error
 }
 
 // 1 is delay, 0 is no delay, 2 is just flush.
+const (
+	NO_DELAY = iota
+	DELAY
+	FLUSH
+)
+
 type pakcAdnType struct {
 	pack *mqtt.Pack
 	typ  byte
@@ -75,11 +81,11 @@ loop:
 				queue.conn.SetWriteDeadline(time.Now().Add(time.Second * time.Duration(Conf.WriteTimeout)))
 			}
 			switch pt.typ {
-			case 0:
+			case NO_DELAY:
 				err = mqtt.WritePack(pt.pack, queue.w)
-			case 1:
+			case DELAY:
 				err = mqtt.DelayWritePack(pt.pack, queue.w)
-			case 2:
+			case FLUSH:
 				err = queue.w.Flush()
 			}
 
@@ -111,7 +117,7 @@ func (queue *PackQueue) WriteDelayPack(pack *mqtt.Pack) error {
 	}
 	queue.writeChan <- &pakcAdnType{
 		pack: pack,
-		typ:  1,
+		typ:  DELAY,
 	}
 	return nil
 }
@@ -120,7 +126,7 @@ func (queue *PackQueue) Flush() error {
 	if queue.writeError != nil {
 		return queue.writeError
 	}
-	queue.writeChan <- &pakcAdnType{typ: 2}
+	queue.writeChan <- &pakcAdnType{typ: FLUSH}
 	return nil
 }
 

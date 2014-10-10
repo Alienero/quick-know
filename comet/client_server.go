@@ -107,7 +107,7 @@ loop:
 				}
 			case pAndErr = <-c.readChan:
 				if err = c.waitPack(pAndErr); err != nil {
-					glog.Error(err)
+					glog.Error("Get a connection error , will break(%v)", err)
 					break loop
 				}
 			case <-c.CloseChan:
@@ -116,6 +116,11 @@ loop:
 			}
 		} else {
 			select {
+			case <-findEndChan:
+				if err = c.offlineEnd(); err != nil {
+					glog.Error(err)
+					break loop
+				}
 			case pAndErr = <-c.readChan:
 				if err = c.waitPack(pAndErr); err != nil {
 					glog.Error(err)
@@ -150,13 +155,14 @@ loop:
 		msg.Typ = OFFLINE
 		store.Manager.InsertOfflineMsg(msg)
 	}
+	glog.Info("Cleaned the online msgs channel.")
 	// Close the online msg channel
 	close(c.onlines)
 	if c.isSendClose {
 		c.CloseChan <- 0
 	}
 	close(c.CloseChan)
-
+	glog.Info("Groutine will esc.")
 	return
 }
 
@@ -248,7 +254,6 @@ func (c *client) waitPack(pAndErr *packAndErr) (err error) {
 	// hava not recive a heart beat pack at an
 	// given time.
 	if pAndErr.err != nil {
-		glog.Infof("Get a connection error , will break(%v)", pAndErr.err)
 		err = pAndErr.err
 		return
 	}
@@ -278,13 +283,6 @@ func (c *client) waitQuit() {
 	c.isSendClose = true
 }
 
-func (c *client) pushMsg(msg *define.Msg) error {
-	pack := mqtt.GetPubPack(1, msg.Dup, msg.Msg_id, &msg.Topic, msg.Body)
-	// Write this pack
-	err := c.queue.WritePack(pack)
-	return err
-}
-
 func (c *client) delMsg(msg_id int) {
 	if c.onlineCache[msg_id] != nil {
 		// Del the online msg in the msg cache
@@ -302,14 +300,21 @@ func (c *client) delMsg(msg_id int) {
 	}
 }
 
+func (c *client) pushMsg(msg *define.Msg) error {
+	pack := mqtt.GetPubPack(1, msg.Dup, msg.Msg_id, &msg.Topic, msg.Body)
+	// Write this pack
+	err := c.queue.WritePack(pack)
+	return err
+}
+
 func (c *client) pushOfflineMsg(msg *define.Msg) (err error) {
 	// The max cache size is 20
-	if c.isOfflineClose && msg == nil {
+	if msg == nil && c.isOfflineClose {
 		// Send
 		err = c.queue.Flush()
 	} else {
 		// Wait
-		if c.offlineNum > 20 {
+		if c.offlineNum > 20 || c.isOfflineClose {
 			// Send
 			pack := mqtt.GetPubPack(1, msg.Dup, msg.Msg_id, &msg.Topic, msg.Body)
 			err = c.queue.WritePack(pack)
@@ -359,18 +364,3 @@ func WriteOnlineMsg(msg *define.Msg) {
 		c.lock.Unlock()
 	}
 }
-
-// func getOfflineId(id string) (int, error) {
-// 	i, err := store.Manager.GetOfflineCount(id)
-// 	if err != nil {
-// 		i = math.MaxInt16
-// 	}
-// 	if i < 1 {
-// 		i = math.MaxInt16
-// 	}
-// 	if i == math.MaxUint16 {
-// 		glog.Info("Give up the offline msg")
-// 		return 0, errors.New("i == MaxUnit16")
-// 	}
-// 	return i + 1, nil
-// }

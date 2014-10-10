@@ -12,7 +12,7 @@ import (
 )
 
 func TestPrivateMsg(t *testing.T) {
-	u := &define.Msg{Body: []byte("这是离线消息1"), To_id: "apq5y6w9stc4"}
+	u := &define.Msg{Body: []byte("这是离线消息12"), To_id: "apq5y6w9stc4"}
 	data, err := json.Marshal(u)
 	if err != nil {
 		t.Error(err)

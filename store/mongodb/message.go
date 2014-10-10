@@ -51,15 +51,15 @@ func (mongo *Mongodb) GetOfflineMsg(id string, fin <-chan byte) (<-chan *Msg_id,
 }
 
 // Should delete.
-func (mongo *Mongodb) GetOfflineCount(id string) (int, error) {
-	c := mongo.sei_msg.DB(Config.MsgName).C(Config.OfflineName)
-	defer mongo.sei_msg.Refresh()
-	msg := new(Msg)
-	if err := c.Find(bson.M{"to_id": id}).Sort("msg_id", "-1").One(&msg); err != nil {
-		return 0, err
-	}
-	return msg.Msg_id, nil
-}
+// func (mongo *Mongodb) GetOfflineCount(id string) (int, error) {
+// 	c := mongo.sei_msg.DB(Config.MsgName).C(Config.OfflineName)
+// 	defer mongo.sei_msg.Refresh()
+// 	msg := new(Msg)
+// 	if err := c.Find(bson.M{"to_id": id}).Sort("msg_id", "-1").One(&msg); err != nil {
+// 		return 0, err
+// 	}
+// 	return msg.Msg_id, nil
+// }
 
 // Del the offile msg
 func (mongo *Mongodb) DelOfflineMsg(id string) error {
