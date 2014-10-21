@@ -17,13 +17,22 @@ import (
 type user struct {
 	ID      string
 	isBreak bool
+
+	isOK bool
 }
 
+type handler func(w http.ResponseWriter, r *http.Request, uu *user)
+
 type handle struct {
-	Post func(w http.ResponseWriter, r *http.Request, uu *user)
+	f      handler
+	method string
 }
 
 func (h *handle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method != h.method {
+		glog.Info("Undefine Method.")
+		http.Error(w, "", http.StatusMethodNotAllowed)
+	}
 	u := new(user)
 	h.prepare(w, r, u)
 	if u.isBreak {
@@ -31,14 +40,8 @@ func (h *handle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "", http.StatusForbidden)
 		return
 	}
-	switch r.Method {
-	case "POST":
-		glog.Info("Do the post method")
-		h.Post(w, r, u)
-	default:
-		glog.Info("No define method")
-		http.Error(w, "", http.StatusMethodNotAllowed)
-	}
+	glog.Infof("Do the %v method", r.Method)
+	h.f(w, r, u)
 }
 func (h *handle) prepare(w http.ResponseWriter, r *http.Request, u *user) {
 	// Check the use name and password
@@ -68,5 +71,8 @@ func (h *handle) prepare(w http.ResponseWriter, r *http.Request, u *user) {
 	}
 }
 
-// func (h *handle) Post(w http.ResponseWriter, r *http.Request, uu *user) {
-// }
+func Handle(path, method string, h handler) {
+	http.Handle(path, &handle{
+		f:      h,
+		method: method})
+}
