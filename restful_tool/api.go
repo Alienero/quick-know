@@ -11,13 +11,66 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"strconv"
+	"strings"
+	"sync"
 )
 
 var (
+	Url string
 	ID  string
 	Psw string
 	c   = new(http.Client)
+
+	pool = &sync.Pool{
+		New: func() interface{} {
+			return make(Urls, 0, 4)
+		},
+	}
 )
+
+type Urls []string
+
+func NewUrls(path string) Urls {
+	s := pool.Get().(Urls)
+	s = append(s, Url)
+	return append(s, path)
+}
+
+func (u *Urls) Add(s string) {
+	*u = append(*u, s)
+}
+
+func (u Urls) String() string {
+	return strings.Join(u, "")
+}
+
+func (u Urls) ReFresh() {
+	pool.Put(u)
+}
+
+func AddPrivateMsg(to_id string, expired int64, msg []byte) error {
+	us := NewUrls("/push/private")
+	defer us.ReFresh()
+	us.Add("?to_id=" + to_id)
+	if expired > 0 {
+		us.Add("&expired=" + strconv.FormatInt(expired, 10))
+	}
+	req, err := http.NewRequest("PUT", us.String(), bytes.NewReader(msg))
+	if err != nil {
+		return err
+	}
+	req.SetBasicAuth(ID, Psw)
+	println(us.String())
+	resp, err := c.Do(req)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != 200 {
+		return errors.New("Add private msg fail.")
+	}
+	return nil
+}
 
 func AddUser(psw string) (string, error) {
 	req, err := http.NewRequest("POST", "http://127.0.0.1:9901/push/add_user", bytes.NewReader([]byte(`{"psw":"`+psw+`"}`)))

@@ -30,6 +30,7 @@ func private_msg(w http.ResponseWriter, r *http.Request, u *user) {
 	msg := new(define.Msg)
 	r.ParseForm()
 	msg.To_id = r.FormValue("to_id")
+	glog.Infof("To_id is :%v", msg.To_id)
 	if s := r.FormValue("expired"); s != "" {
 		msg.Expired, _ = strconv.ParseInt(s, 10, 64)
 	}
@@ -67,7 +68,7 @@ func add_user(w http.ResponseWriter, r *http.Request, uu *user) {
 	// 	return
 	// }
 	u.Owner = uu.ID
-	u.Id = get_uuid()
+	// u.Id = get_uuid()
 	if err := store.Manager.AddUser(u); err != nil {
 		badReaquest(w, `{"status":"fail"}`)
 	} else {
@@ -114,7 +115,7 @@ func add_sub(w http.ResponseWriter, r *http.Request, uu *user) {
 	if s := r.FormValue("type"); s != "" {
 		sub.Typ, _ = strconv.Atoi(s)
 	}
-	sub.Id = get_uuid()
+	// sub.Id = get_uuid()
 	sub.Own = uu.ID
 	if err := store.Manager.AddSub(sub); err != nil {
 		badReaquest(w, `{"status":"fail"}`)

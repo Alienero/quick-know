@@ -15,6 +15,7 @@ import (
 func (mongo *Mongodb) AddSub(sub *Sub) error {
 	sei := mongo.sei_msg.New()
 	defer sei.Refresh()
+	sub.Id = Get_uuid()
 	c := sei.DB(Config.MsgName).C(Config.SubName)
 	return c.Insert(sub)
 }

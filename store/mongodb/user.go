@@ -42,6 +42,7 @@ func (mongo *Mongodb) Ctrl_login(id, auth string) (bool, string) {
 func (mongo *Mongodb) AddUser(u *User) error {
 	sei := mongo.sei_user.New()
 	defer sei.Refresh()
+	u.Id = Get_uuid()
 	c := sei.DB(Config.UserName).C(Config.Clients)
 	return c.Insert(u)
 }

@@ -38,18 +38,8 @@ func newCServer(rw *spp.Conn, id string) *ControlServer {
 }
 
 func (cs *ControlServer) listen_loop() (err error) {
-	defer func() {
-		// Close the res
-		// cs.queue.Close()
-	}()
 	var pack *spp.Pack
 	for {
-		// Listen
-		// pack, err = cs.queue.ReadPack()
-		// if err != nil {
-		// glog.Errorf("clientLoop read pack error:%v\n", err)
-		// break
-		// }
 		f := ctrl_handles[pack.Typ]
 		if f == nil {
 			err = fmt.Errorf("No such pack type:%v", pack.Typ)

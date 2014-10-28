@@ -1,1 +1,0 @@
-curl -X POST -v http://127.0.0.1:9901/push/private -H "Content-type: application/json" -u "615582195:1" -d '{"to_id":"29d2b76f47e4f2e36e732a53c74e2731","body":"N2Q0MzFlNDJkZmE2YTZkNjkzYWMyZDA0OjVlOTg3YWM2ZDJlMDRkOTVhOWQ4ZjBkMQ=="}'
