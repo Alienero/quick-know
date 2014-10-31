@@ -52,6 +52,7 @@ func private_msg(w http.ResponseWriter, r *http.Request, u *user) {
 		io.WriteString(w, `{"status":"success"}`)
 		u.isOK = true
 	} else {
+		glog.Error("push private msg error: user not exist.")
 		badReaquest(w, `{"status":"fail"}`)
 	}
 }
@@ -102,12 +103,8 @@ func del_user(w http.ResponseWriter, r *http.Request, uu *user) {
 
 // Add sub group
 func add_sub(w http.ResponseWriter, r *http.Request, uu *user) {
+	glog.Info("Add a new sub.")
 	sub := new(define.Sub)
-	// err := readAdnGet(r.Body, sub)
-	// if err != nil {
-	// 	glog.Errorf("Get a new sub error%v\n", err)
-	// 	return
-	// }
 	r.ParseForm()
 	if s := r.FormValue("max"); s != "" {
 		sub.Max, _ = strconv.Atoi(s)
@@ -118,8 +115,10 @@ func add_sub(w http.ResponseWriter, r *http.Request, uu *user) {
 	// sub.Id = get_uuid()
 	sub.Own = uu.ID
 	if err := store.Manager.AddSub(sub); err != nil {
+		glog.Errorf("Add new sub error(%v)", err)
 		badReaquest(w, `{"status":"fail"}`)
 	} else {
+		glog.Info("Add sub ok.")
 		uu.isOK = true
 		io.WriteString(w, `{"sub_id":"`)
 		io.WriteString(w, sub.Id)
@@ -143,9 +142,7 @@ func del_sub(w http.ResponseWriter, r *http.Request, uu *user) {
 		badReaquest(w, `{"status":"fail"}`)
 	} else {
 		uu.isOK = true
-		io.WriteString(w, `{"sub_id":"`)
-		io.WriteString(w, sub.Id)
-		io.WriteString(w, `"}`)
+		io.WriteString(w, `{"status":"success"}`)
 	}
 }
 

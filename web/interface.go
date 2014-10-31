@@ -40,7 +40,7 @@ func (h *handle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "", http.StatusForbidden)
 		return
 	}
-	glog.Infof("Do the %v method", r.Method)
+	glog.Infof("Do the %v method,path:%v", r.Method, r.RequestURI)
 	h.f(w, r, u)
 }
 func (h *handle) prepare(w http.ResponseWriter, r *http.Request, u *user) {

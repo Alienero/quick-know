@@ -56,9 +56,16 @@ func (mongo *Mongodb) DelUser(id string, own string) error {
 	if err != nil {
 		return err
 	}
+
+	c := mongo.sei_msg.DB(Config.MsgName).C(Config.OfflineName)
+	defer mongo.sei_msg.Refresh()
+	if _, err = c.RemoveAll(bson.M{"m.to_id": id}); err != nil {
+		return err
+	}
+
 	sei := mongo.sei_user.New()
 	defer sei.Refresh()
-	c := sei.DB(Config.UserName).C(Config.Clients)
+	c = sei.DB(Config.UserName).C(Config.Clients)
 	err = c.Remove(bson.M{"id": id, "owner": own})
 	if err != nil {
 		return err

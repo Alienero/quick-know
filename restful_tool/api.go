@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -46,7 +47,8 @@ func (u Urls) String() string {
 }
 
 func (u Urls) ReFresh() {
-	pool.Put(u)
+
+	pool.Put(u[:0])
 }
 
 func AddPrivateMsg(to_id string, expired int64, msg []byte) error {
@@ -84,6 +86,9 @@ func AddUser(psw string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	if resp.StatusCode != 200 {
+		return "", fmt.Errorf("Add user fail.(not 200 ok(%v))", resp.Status)
+	}
 	// Get the User ID
 	type ID struct {
 		Id string `json:"id"`
@@ -113,14 +118,21 @@ func DelUser(id string) error {
 	return nil
 }
 
-func AddSub(max int, typ int) (string, error) {
+func AddSub(max int64, typ int) (string, error) {
 	us := NewUrls("/push/add_sub")
 	defer us.ReFresh()
+	flag := false
 	if max > 0 {
-		us.Add("&max=", strconv.FormatInt(max, 10))
+		us.Add("?max=", strconv.FormatInt(max, 10))
+		flag = true
 	}
 	if typ > 0 {
-		us.Add("&typ=", strconv.FormatInt(typ, 10))
+		if flag {
+			us.Add("&")
+		} else {
+			us.Add("?")
+		}
+		us.Add("typ=", strconv.Itoa(typ))
 	}
 	req, err := http.NewRequest("PUT", us.String(), nil)
 	if err != nil {
@@ -130,6 +142,9 @@ func AddSub(max int, typ int) (string, error) {
 	resp, err := c.Do(req)
 	if err != nil {
 		return "", err
+	}
+	if resp.StatusCode != 200 {
+		return "", fmt.Errorf("Add sub fail.(not 200 ok(%v))", resp.Status)
 	}
 	// Get the User ID
 	type ID struct {
@@ -141,7 +156,107 @@ func AddSub(max int, typ int) (string, error) {
 	return id.Sub_id, err
 }
 
-// TODO:
+func DelSub(id string) error {
+	us := NewUrls("/push/del_sub")
+	defer us.ReFresh()
+	us.Add("?id=", id)
+	req, err := http.NewRequest("DELETE", us.String(), nil)
+	if err != nil {
+		return err
+	}
+	req.SetBasicAuth(ID, Psw)
+	resp, err := c.Do(req)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != 200 {
+		return errors.New("Del sub fail.")
+	}
+	return nil
+}
+
+func User2Sub(sub_id, user_id string) error {
+	us := NewUrls("/push/user_sub")
+	defer us.ReFresh()
+	us.Add("?sub_id=", sub_id)
+	us.Add("&user_id=", user_id)
+	req, err := http.NewRequest("PUT", us.String(), nil)
+	if err != nil {
+		return err
+	}
+	req.SetBasicAuth(ID, Psw)
+	resp, err := c.Do(req)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != 200 {
+		return errors.New("Put user to sub fail.")
+	}
+	return nil
+}
+
+func RmUserSub(sub_id, user_id string) error {
+	us := NewUrls("/push/rm_user_sub")
+	defer us.ReFresh()
+	us.Add("?sub_id=", sub_id)
+	us.Add("&user_id=", user_id)
+	req, err := http.NewRequest("DELETE", us.String(), nil)
+	if err != nil {
+		return err
+	}
+	req.SetBasicAuth(ID, Psw)
+	resp, err := c.Do(req)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != 200 {
+		return errors.New("Remove user from sub fail.")
+	}
+	return nil
+}
+
+func GroupMsg(sub_id string, expired int64, msg []byte) error {
+	us := NewUrls("/push/group_msg")
+	defer us.ReFresh()
+	us.Add("?sub_id=", sub_id)
+	if expired > 0 {
+		us.Add("&expired=", strconv.FormatInt(expired, 10))
+	}
+	req, err := http.NewRequest("PUT", us.String(), bytes.NewReader(msg))
+	if err != nil {
+		return err
+	}
+	req.SetBasicAuth(ID, Psw)
+	resp, err := c.Do(req)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != 200 {
+		return errors.New("Remove user from sub fail.")
+	}
+	return nil
+}
+
+func Broadcast(expired int64, msg []byte) error {
+	us := NewUrls("/push/all")
+	defer us.ReFresh()
+	if expired > 0 {
+		us.Add("?expired=", strconv.FormatInt(expired, 10))
+	}
+	req, err := http.NewRequest("PUT", us.String(), bytes.NewReader(msg))
+	if err != nil {
+		return err
+	}
+	req.SetBasicAuth(ID, Psw)
+	resp, err := c.Do(req)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != 200 {
+		return errors.New("Remove user from sub fail.")
+	}
+	return nil
+}
 
 func getObject(v interface{}, r io.Reader) error {
 	data, err := ioutil.ReadAll(r)
