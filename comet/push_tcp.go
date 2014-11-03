@@ -12,9 +12,8 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/Alienero/quick-know/store"
-	// "github.com/Alienero/spp"
 	"github.com/Alienero/quick-know/mqtt"
+	"github.com/Alienero/quick-know/store"
 
 	"github.com/golang/glog"
 )
@@ -116,6 +115,7 @@ func login(r *bufio.Reader, w *bufio.Writer, conn net.Conn, typ int) (l listener
 
 	switch typ {
 	case CLIENT:
+		// TODO
 		if !store.Manager.Client_login(*id, *psw) {
 			err = fmt.Errorf("Client Authentication is not passed id:%v,psw:%v", *id, *psw)
 			break
@@ -135,7 +135,6 @@ func login(r *bufio.Reader, w *bufio.Writer, conn net.Conn, typ int) (l listener
 						return nil, errors.New("Close the logon user timeout")
 					}
 					// Has been esc.
-					// Create a new Clinet online.
 				}
 			} else {
 				tc.lock.Unlock()
@@ -144,6 +143,7 @@ func login(r *bufio.Reader, w *bufio.Writer, conn net.Conn, typ int) (l listener
 
 		}
 		c := newClient(r, w, conn, *id, info.GetKeepAlive())
+		// Redis Append.
 		Users.Set(*id, c)
 		l = c
 	case CSERVER:

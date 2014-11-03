@@ -391,6 +391,7 @@ func readString(r *bufio.Reader) (s *string, nn int, err error) {
 	}
 	return
 }
+
 func readInt(r *bufio.Reader, length int) (int, error) {
 	buf := make([]byte, 4)
 	_, err := io.ReadFull(r, buf[:length])

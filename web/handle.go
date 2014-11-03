@@ -34,11 +34,6 @@ func private_msg(w http.ResponseWriter, r *http.Request, u *user) {
 	if s := r.FormValue("expired"); s != "" {
 		msg.Expired, _ = strconv.ParseInt(s, 10, 64)
 	}
-	// err := readAdnGet(r.Body, msg)
-	// if err != nil {
-	// 	glog.Errorf("push private msg error%v\n", err)
-	// 	return
-	// }
 	var err error
 	if msg.Body, err = ioutil.ReadAll(r.Body); err != nil {
 		glog.Errorf("push private msg error%v\n", err)
@@ -52,7 +47,7 @@ func private_msg(w http.ResponseWriter, r *http.Request, u *user) {
 		io.WriteString(w, `{"status":"success"}`)
 		u.isOK = true
 	} else {
-		glog.Error("push private msg error: user not exist.")
+		glog.Info("push private msg error: user not exist.")
 		badReaquest(w, `{"status":"fail"}`)
 	}
 }
@@ -63,13 +58,7 @@ func add_user(w http.ResponseWriter, r *http.Request, uu *user) {
 	u := new(define.User)
 	r.ParseForm()
 	u.Psw = r.FormValue("psw")
-	// err := readAdnGet(r.Body, u)
-	// if err != nil {
-	// 	glog.Errorf("add user error%v\n", err)
-	// 	return
-	// }
 	u.Owner = uu.ID
-	// u.Id = get_uuid()
 	if err := store.Manager.AddUser(u); err != nil {
 		badReaquest(w, `{"status":"fail"}`)
 	} else {
@@ -82,14 +71,10 @@ func add_user(w http.ResponseWriter, r *http.Request, uu *user) {
 
 // Delete a user
 func del_user(w http.ResponseWriter, r *http.Request, uu *user) {
+	glog.Info("Del a user.")
 	u := new(define.User)
 	r.ParseForm()
 	u.Id = r.FormValue("id")
-	// err := readAdnGet(r.Body, u)
-	// if err != nil {
-	// 	glog.Errorf("add user error%v\n", err)
-	// 	return
-	// }
 	if err := store.Manager.DelUser(u.Id, uu.ID); err != nil {
 		glog.Errorf("Del user in the web error:%v", err)
 		badReaquest(w, `{"status":"fail"}`)
@@ -128,12 +113,8 @@ func add_sub(w http.ResponseWriter, r *http.Request, uu *user) {
 
 // Del sub msg
 func del_sub(w http.ResponseWriter, r *http.Request, uu *user) {
+	glog.Info("Del a sub.")
 	sub := new(define.Sub)
-	// err := readAdnGet(r.Body, sub)
-	// if err != nil {
-	// 	glog.Errorf("Get a new sub error%v\n", err)
-	// 	return
-	// }
 	r.ParseForm()
 	sub.Id = r.FormValue("id")
 	if err := store.Manager.DelSub(sub.Id, uu.ID); err != nil {
@@ -148,12 +129,8 @@ func del_sub(w http.ResponseWriter, r *http.Request, uu *user) {
 
 // Add use into msg's sub group
 func user_sub(w http.ResponseWriter, r *http.Request, uu *user) {
+	glog.Info("Del a user sub.")
 	sm := new(define.Sub_map)
-	// err := readAdnGet(r.Body, sm)
-	// if err != nil {
-	// 	glog.Errorf("Get the add user(%v) of id(%v) to sub(%v) error:%v\n", sm.User_id, uu.ID, sm.Sub_id, err)
-	// 	return
-	// }
 	r.ParseForm()
 	sm.Sub_id = r.FormValue("sub_id")
 	sm.User_id = r.FormValue("user_id")
@@ -169,12 +146,8 @@ func user_sub(w http.ResponseWriter, r *http.Request, uu *user) {
 
 // Remove user from the sub group
 func rm_user_sub(w http.ResponseWriter, r *http.Request, uu *user) {
+	glog.Info("rm a user from a sub.")
 	sm := new(define.Sub_map)
-	// err := readAdnGet(r.Body, sm)
-	// if err != nil {
-	// 	glog.Errorf("Get the remove user(%v) of id(%v) to sub(%v) error:%v\n", sm.User_id, uu.ID, sm.Sub_id, err)
-	// 	return
-	// }
 	r.ParseForm()
 	sm.Sub_id = r.FormValue("sub_id")
 	sm.User_id = r.FormValue("user_id")
@@ -189,13 +162,9 @@ func rm_user_sub(w http.ResponseWriter, r *http.Request, uu *user) {
 
 // Send msg to all
 func broadcast(w http.ResponseWriter, r *http.Request, uu *user) {
+	glog.Info("Send a msg to all.")
 	msg := new(define.Msg)
 	msg.Topic = Inf_All
-	// err := readAdnGet(r.Body, msg)
-	// if err != nil {
-	// 	glog.Errorf("push inform msg error%v\n", err)
-	// 	return
-	// }
 	r.ParseForm()
 	if s := r.FormValue("expired"); s != "" {
 		msg.Expired, _ = strconv.ParseInt(s, 10, 64)
@@ -207,8 +176,6 @@ func broadcast(w http.ResponseWriter, r *http.Request, uu *user) {
 	}
 	if msg.To_id == "" {
 		msg.Owner = uu.ID
-		// msg.Msg_id = get_uuid()
-
 		ch := store.Manager.ChanUserID(uu.ID)
 		go func() {
 			for {
@@ -230,16 +197,7 @@ func broadcast(w http.ResponseWriter, r *http.Request, uu *user) {
 
 // Send msg to sub group
 func group_msg(w http.ResponseWriter, r *http.Request, uu *user) {
-	// type multi_cast struct {
-	// 	Sub_id string
-	// 	Msg    *define.Msg
-	// }
-	// mc := new(multi_cast)
-	// err := readAdnGet(r.Body, mc)
-	// if err != nil {
-	// 	glog.Errorf("Get sub msg error:%v\n", err)
-	// 	return
-	// }
+	glog.Info("add a msg to a group.")
 	msg := new(define.Msg)
 	r.ParseForm()
 	sub_id := r.FormValue("sub_id")

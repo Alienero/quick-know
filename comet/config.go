@@ -25,6 +25,12 @@ type config struct {
 
 	ReadTimeout  int // Heart beat check (seconds)
 	WriteTimeout int
+
+	// Redis conf
+	Network    string
+	Address    string
+	MaxIde     int
+	IdeTimeout int // Second.
 }
 
 func InitConf() error {
