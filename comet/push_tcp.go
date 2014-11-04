@@ -9,10 +9,12 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/rpc"
 	"runtime"
 	"time"
 
 	"github.com/Alienero/quick-know/mqtt"
+	myrpc "github.com/Alienero/quick-know/rpc"
 	"github.com/Alienero/quick-know/store"
 
 	"github.com/golang/glog"
@@ -115,35 +117,66 @@ func login(r *bufio.Reader, w *bufio.Writer, conn net.Conn, typ int) (l listener
 
 	switch typ {
 	case CLIENT:
-		// TODO
 		if !store.Manager.Client_login(*id, *psw) {
 			err = fmt.Errorf("Client Authentication is not passed id:%v,psw:%v", *id, *psw)
 			break
 		}
 		// Has been already logon
-		if tc := Users.Get(*id); tc != nil {
-			tc.lock.Lock()
-			if !tc.isLetClose {
-				tc.isLetClose = true
-				tc.lock.Unlock()
-				select {
-				case tc.CloseChan <- 1:
-					<-tc.CloseChan
-				case <-time.After(2 * time.Second):
-					// Timeout.
-					if tc := Users.Get(*id); tc != nil {
-						return nil, errors.New("Close the logon user timeout")
-					}
-					// Has been esc.
-				}
-			} else {
-				tc.lock.Unlock()
-				return nil, errors.New("Has been relogining")
-			}
-
+		// TODO
+		var (
+			ok bool
+			s  string
+		)
+	re:
+		ok, s, err = redis_isExist(*id)
+		if err != nil {
+			return
 		}
+		if ok {
+			var client *rpc.Client
+			client, err = rpc.DialHTTP("tcp", s)
+			if err != nil {
+				return
+			}
+			reply := new(myrpc.Reply)
+			err = client.Call("Comet_RPC.Relogin", *id, reply)
+			if err != nil {
+				return
+			}
+			if reply.IsRe {
+				goto re
+			}
+			if !reply.IsOk {
+				err = errors.New("Has been relogining")
+				return
+			}
+		}
+		// if tc := Users.Get(*id); tc != nil {
+		// 	tc.lock.Lock()
+		// 	if !tc.isLetClose {
+		// 		tc.isLetClose = true
+		// 		tc.lock.Unlock()
+		// 		select {
+		// 		case tc.CloseChan <- 1:
+		// 			<-tc.CloseChan
+		// 		case <-time.After(2 * time.Second):
+		// 			// Timeout.
+		// 			if tc := Users.Get(*id); tc != nil {
+		// 				return nil, errors.New("Close the logon user timeout")
+		// 			}
+		// 			// Has been esc.
+		// 		}
+		// 	} else {
+		// 		tc.lock.Unlock()
+		// 		return nil, errors.New("Has been relogining")
+		// 	}
+
+		// }
 		c := newClient(r, w, conn, *id, info.GetKeepAlive())
 		// Redis Append.
+		if err = redis_login(*id); err != nil {
+			return
+		}
 		Users.Set(*id, c)
 		l = c
 	case CSERVER:

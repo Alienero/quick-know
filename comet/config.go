@@ -17,6 +17,8 @@ var Conf = &config{}
 type config struct {
 	Listen_addr string // Client listener addr
 
+	RPC_addr string
+
 	WirteLoopChanNum int // Should > 1
 
 	ReadPackLoop int

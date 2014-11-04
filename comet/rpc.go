@@ -6,13 +6,17 @@ package comet
 
 import (
 	"errors"
+	"net"
+	"net/http"
 	"net/rpc"
 	"time"
 
-	"github.com/Alienero/quick-know/rpc"
+	myrpc "github.com/Alienero/quick-know/rpc"
+
+	"github.com/golang/glog"
 )
 
-type comet_RPC struct {
+type Comet_RPC struct {
 }
 
 // func (*comet_RPC) Lock(id string, r *rpc.Reply) error {
@@ -31,7 +35,7 @@ type comet_RPC struct {
 // 	return nil
 // }
 
-func (*comet_RPC) Relogin(id string, r *rpc.Reply) error {
+func (*Comet_RPC) Relogin(id string, r *myrpc.Reply) error {
 	c := Users.Get(id)
 	if c == nil {
 		r.IsRe = true
@@ -47,7 +51,7 @@ func (*comet_RPC) Relogin(id string, r *rpc.Reply) error {
 			case <-time.After(2 * time.Second):
 				// Timeout.
 				if c := Users.Get(id); c != nil {
-					return "Close the logon user timeout"
+					return errors.New("Close the logon user timeout")
 				}
 				// Has been esc.
 			}
@@ -56,4 +60,19 @@ func (*comet_RPC) Relogin(id string, r *rpc.Reply) error {
 		}
 	}
 	return nil
+}
+
+func listenRPC() {
+	comet := new(Comet_RPC)
+	if err := rpc.Register(comet); err != nil {
+		glog.Fatal(err)
+	}
+	rpc.HandleHTTP()
+	l, err := net.Listen("tcp", Conf.RPC_addr)
+	if err != nil {
+		glog.Fatal(err)
+	}
+	if err = http.Serve(l, nil); err != nil {
+		glog.Error(err)
+	}
 }
