@@ -36,7 +36,7 @@ type client struct {
 
 	CloseChan   chan byte // Other gorountine Call notice exit
 	isSendClose bool      // Wheather has a new login user.
-	isLetClose  bool
+	isLetClose  bool      // Wheather has relogin.
 
 	isStop bool
 	lock   *sync.Mutex
@@ -76,6 +76,9 @@ func (c *client) listen_loop() (e error) {
 				glog.Errorf("Redis conn error:%v", err)
 			}
 			Users.Del(c.id)
+			if c.isSendClose {
+				c.CloseChan <- 0
+			}
 		}
 	}()
 	var (
@@ -83,7 +86,8 @@ func (c *client) listen_loop() (e error) {
 		msg     *define.Msg
 		pAndErr *packAndErr
 
-		noticeFin = make(chan byte)
+		noticeFin = make(chan byte, 2)
+		// wg        = new(sync.WaitGroup)
 
 		findEndChan <-chan byte
 	)
@@ -152,6 +156,7 @@ loop:
 	for i := 0; i < 2; i++ {
 		noticeFin <- 1
 	}
+	close(noticeFin)
 	// Write the onlines msg to the db
 	for _, v := range c.onlineCache {
 		// Add the offline msg id
@@ -167,9 +172,6 @@ loop:
 	glog.Info("Cleaned the online msgs channel.")
 	// Close the online msg channel
 	close(c.onlines)
-	if c.isSendClose {
-		c.CloseChan <- 0
-	}
 	close(c.CloseChan)
 	glog.Info("Groutine will esc.")
 	return

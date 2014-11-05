@@ -9,6 +9,7 @@ import (
 
 	. "github.com/Alienero/quick-know/store/define"
 
+	"github.com/golang/glog"
 	"labix.org/v2/mgo/bson"
 )
 
@@ -31,6 +32,7 @@ func (mongo *Mongodb) GetOfflineMsg(id string, fin <-chan byte) (<-chan *Msg_id,
 				msg_id = new(Msg_id)
 			case <-fin:
 				// No read the all offline msg, notice close
+				glog.Info("DB FIN")
 				flag = true
 				break loop
 			}
@@ -43,6 +45,7 @@ func (mongo *Mongodb) GetOfflineMsg(id string, fin <-chan byte) (<-chan *Msg_id,
 		if !flag {
 			// not recive the fin. must wait the fin
 			<-fin
+			glog.Info("DB FIN,2")
 		}
 		close(ch)
 		close(ch2)

@@ -38,7 +38,7 @@ type Comet_RPC struct {
 func (*Comet_RPC) Relogin(id string, r *myrpc.Reply) error {
 	c := Users.Get(id)
 	if c == nil {
-		r.IsRe = true
+		// r.IsRe = true
 	} else {
 		c.lock.Lock()
 		if !c.isLetClose {
@@ -48,6 +48,7 @@ func (*Comet_RPC) Relogin(id string, r *myrpc.Reply) error {
 			case c.CloseChan <- 1:
 				<-c.CloseChan
 				r.IsOk = true
+				glog.Info("RPC: Ok will be relogin.")
 			case <-time.After(2 * time.Second):
 				// Timeout.
 				if c := Users.Get(id); c != nil {

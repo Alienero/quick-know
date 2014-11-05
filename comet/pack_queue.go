@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/Alienero/quick-know/mqtt"
+
+	"github.com/golang/glog"
 )
 
 // Tcp write queue
@@ -157,19 +159,31 @@ func (queue *PackQueue) ReadPackInLoop(fin <-chan byte) <-chan *packAndErr {
 	ch := make(chan *packAndErr, Conf.ReadPackLoop)
 	go func() {
 		// defer recover()
+		is_continue := true
 		p := new(packAndErr)
 	loop:
 		for {
 			if queue.alive > 0 {
 				queue.conn.SetReadDeadline(time.Now().Add(time.Second * time.Duration(queue.alive)))
 			}
-			p.pack, p.err = mqtt.ReadPack(queue.r)
-			select {
-			case ch <- p:
-				// Without anything to do
-			case <-fin:
+			if is_continue {
+				p.pack, p.err = mqtt.ReadPack(queue.r)
+				if p.err != nil {
+					is_continue = false
+				}
+				select {
+				case ch <- p:
+					// Without anything to do
+				case <-fin:
+					glog.Info("Queue FIN")
+					break loop
+				}
+			} else {
+				<-fin
+				glog.Info("Queue FIN")
 				break loop
 			}
+
 			p = new(packAndErr)
 		}
 		close(ch)

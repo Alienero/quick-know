@@ -34,11 +34,18 @@ var redisPool = &redis.Pool{
 func redis_login(id string) error {
 	conn := redisPool.Get()
 	defer conn.Close()
-	conn.Send("SET", id, Conf.RPC_addr)
+	conn.Send("SETNX", id, Conf.RPC_addr)
 	conn.Send("LPUSH", Conf.RPC_addr, id)
 	err := conn.Flush()
 	if err != nil {
 		return err
+	}
+	reply, err := conn.Receive()
+	if err != nil {
+		return err
+	}
+	if i, _ := redis.Int(reply, err); i != 1 {
+		return errors.New("id not exist.")
 	}
 	_, err = conn.Receive()
 	return err
@@ -64,13 +71,10 @@ func redis_isExist(id string) (bool, string, error) {
 	if err != nil {
 		return false, "", err
 	}
-	if reply == nil {
-		// not exist.
-		return false, "", nil
-	}
-	if s, ok := reply.(string); ok && s != "" {
+	s, _ := redis.String(reply, nil)
+	if s != "" {
 		// exist.
 		return true, s, nil
 	}
-	return false, "", errors.New("redis get reply not type string.")
+	return false, "", nil
 }
