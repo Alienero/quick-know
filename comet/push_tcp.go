@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package comet
+package main
 
 import (
 	"bufio"
@@ -20,31 +20,34 @@ import (
 	"github.com/golang/glog"
 )
 
-func startListen(typ int, addr string) error {
-	var tempDelay time.Duration // how long to sleep on accept failure
-	l, err := net.Listen("tcp", addr)
-	if err != nil {
-		return err
-	}
-	for {
-		rw, e := l.Accept()
-		if ne, ok := e.(net.Error); ok && ne.Temporary() {
-			if tempDelay == 0 {
-				tempDelay = 5 * time.Millisecond
-			} else {
-				tempDelay *= 2
-			}
-			if max := 1 * time.Second; tempDelay > max {
-				tempDelay = max
-				time.Sleep(tempDelay)
-				continue
-			}
-			glog.Errorf("http: Accept error: %v; retrying in %v", e, tempDelay)
-			return e
+func startListen(typ int, addr string) {
+	err := func() error {
+		var tempDelay time.Duration // how long to sleep on accept failure
+		l, err := net.Listen("tcp", addr)
+		if err != nil {
+			return err
 		}
-		c := newConn(rw, typ)
-		go c.serve()
-	}
+		for {
+			rw, e := l.Accept()
+			if ne, ok := e.(net.Error); ok && ne.Temporary() {
+				if tempDelay == 0 {
+					tempDelay = 5 * time.Millisecond
+				} else {
+					tempDelay *= 2
+				}
+				if max := 1 * time.Second; tempDelay > max {
+					tempDelay = max
+					time.Sleep(tempDelay)
+					continue
+				}
+				glog.Errorf("http: Accept error: %v; retrying in %v", e, tempDelay)
+				return e
+			}
+			c := newConn(rw, typ)
+			go c.serve()
+		}
+	}()
+	glog.Fatal(err)
 }
 
 // Process connetion settings

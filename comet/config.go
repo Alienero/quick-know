@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package comet
+package main
 
 import (
 	"bufio"
@@ -33,6 +33,11 @@ type config struct {
 	Address    string
 	MaxIde     int
 	IdeTimeout int // Second.
+
+	// Etcd conf.
+	Etcd_addr     []string
+	Etcd_interval uint64
+	Etcd_dir      string
 }
 
 func InitConf() error {

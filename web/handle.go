@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package web
+package main
 
 import (
 	"io"
@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/Alienero/quick-know/comet"
 	"github.com/Alienero/quick-know/store"
 	"github.com/Alienero/quick-know/store/define"
 
@@ -43,7 +42,11 @@ func private_msg(w http.ResponseWriter, r *http.Request, u *user) {
 		msg.Owner = u.ID
 		// msg.Msg_id = get_uuid()
 		msg.Topic = Private + msg.Owner
-		comet.WriteOnlineMsg(msg)
+		if err = write_msg(msg); err != nil {
+			glog.Error(err)
+			badReaquest(w, `{"status":"fail"}`)
+			return
+		}
 		io.WriteString(w, `{"status":"success"}`)
 		u.isOK = true
 	} else {
@@ -185,7 +188,7 @@ func broadcast(w http.ResponseWriter, r *http.Request, uu *user) {
 				}
 				m := *msg
 				m.To_id = s
-				comet.WriteOnlineMsg(&m)
+				write_msg(&m)
 			}
 		}()
 		uu.isOK = true
@@ -223,7 +226,7 @@ func group_msg(w http.ResponseWriter, r *http.Request, uu *user) {
 				}
 				m := *msg
 				m.To_id = s
-				comet.WriteOnlineMsg(&m)
+				write_msg(&m)
 			}
 		}()
 		uu.isOK = true

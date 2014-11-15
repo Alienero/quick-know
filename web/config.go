@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package web
+package main
 
 import (
 	"bufio"
@@ -16,11 +16,18 @@ var Conf = new(config)
 
 type config struct {
 	Listen_addr string
+
+	// Etcd conf.
+	Etcd_addr     []string
+	Etcd_interval uint64
+	Etcd_dir      string
+
+	// CoreBanlancing conf.
+	Cbl_addr string
 }
 
 func InitConf() error {
 	buf := new(bytes.Buffer)
-
 	f, err := os.Open("web.conf")
 	if err != nil {
 		return err

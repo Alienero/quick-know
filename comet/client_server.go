@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package comet
+package main
 
 import (
 	"bufio"
@@ -338,40 +338,4 @@ func (c *client) pushOfflineMsg(msg *define.Msg) (err error) {
 		}
 	}
 	return
-}
-
-func WriteOnlineMsg(msg *define.Msg) {
-	msg.Dup = 0
-	// fix the Expired
-	if msg.Expired > 0 {
-		msg.Expired = time.Now().UTC().Add(time.Duration(msg.Expired)).Unix()
-	}
-
-	c := Users.Get(msg.To_id)
-	if c == nil {
-		msg.Typ = OFFLINE
-		// Get the offline msg id
-		store.Manager.InsertOfflineMsg(msg)
-		return
-	}
-
-	c.lock.Lock()
-	if len(c.onlines) == Conf.MaxCacheMsg {
-		c.lock.Unlock()
-		msg.Typ = OFFLINE
-		store.Manager.InsertOfflineMsg(msg)
-		return
-	} else {
-		c.lock.Unlock()
-	}
-	c.lock.Lock()
-	if c.isStop {
-		c.lock.Unlock()
-		msg.Typ = OFFLINE
-		store.Manager.InsertOfflineMsg(msg)
-	} else {
-		msg.Typ = ONLINE
-		c.onlines <- msg
-		c.lock.Unlock()
-	}
 }

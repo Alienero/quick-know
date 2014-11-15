@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package comet
+package main
 
 import (
 	"errors"
@@ -12,28 +12,14 @@ import (
 	"time"
 
 	myrpc "github.com/Alienero/quick-know/rpc"
+	"github.com/Alienero/quick-know/store"
+	"github.com/Alienero/quick-know/store/define"
 
 	"github.com/golang/glog"
 )
 
 type Comet_RPC struct {
 }
-
-// func (*comet_RPC) Lock(id string, r *rpc.Reply) error {
-// 	c := Users.Get(id)
-// 	if c != nil {
-// 		c.lock.Lock()
-// 	}
-// 	return nil
-// }
-
-// func (*comet_RPC) Unlock(id string, r *rpc.Reply) error {
-// 	c := Users.Get(id)
-// 	if c != nil {
-// 		c.lock.Unlock()
-// 	}
-// 	return nil
-// }
 
 func (*Comet_RPC) Relogin(id string, r *myrpc.Reply) error {
 	c := Users.Get(id)
@@ -61,6 +47,46 @@ func (*Comet_RPC) Relogin(id string, r *myrpc.Reply) error {
 		}
 	}
 	return nil
+}
+
+func (*Comet_RPC) WriteOnlineMsg(msg *define.Msg, r *myrpc.Reply) (err error) {
+	msg.Dup = 0
+	// fix the Expired
+	if msg.Expired > 0 {
+		msg.Expired = time.Now().UTC().Add(time.Duration(msg.Expired)).Unix()
+	}
+
+	c := Users.Get(msg.To_id)
+	if c == nil {
+		msg.Typ = OFFLINE
+		// Get the offline msg id
+		err = store.Manager.InsertOfflineMsg(msg)
+		return
+	}
+
+	c.lock.Lock()
+	if len(c.onlines) == Conf.MaxCacheMsg {
+		c.lock.Unlock()
+		msg.Typ = OFFLINE
+		err = store.Manager.InsertOfflineMsg(msg)
+		return
+	} else {
+		c.lock.Unlock()
+	}
+	c.lock.Lock()
+	if c.isStop {
+		c.lock.Unlock()
+		msg.Typ = OFFLINE
+		err = store.Manager.InsertOfflineMsg(msg)
+	} else {
+		msg.Typ = ONLINE
+		c.onlines <- msg
+		c.lock.Unlock()
+	}
+	if err == nil {
+		r.IsOk = true
+	}
+	return
 }
 
 func listenRPC() {
