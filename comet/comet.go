@@ -35,6 +35,10 @@ func main() {
 	}
 	defer glog.Flush()
 
+	glog.Info("Read the config.")
+	if err := InitConf(); err != nil {
+		glog.Fatal(err)
+	}
 	glog.Infoln("Loading store")
 	if err := store.Init(); err != nil {
 		glog.Fatal(err)

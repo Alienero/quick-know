@@ -50,6 +50,12 @@ func (*Comet_RPC) Relogin(id string, r *myrpc.Reply) error {
 }
 
 func (*Comet_RPC) WriteOnlineMsg(msg *define.Msg, r *myrpc.Reply) (err error) {
+	defer func() {
+		if err == nil {
+			r.IsOk = true
+		}
+	}()
+	glog.Infof("Get a Write msg RPC,msg is :%v", string(msg.Body))
 	msg.Dup = 0
 	// fix the Expired
 	if msg.Expired > 0 {
@@ -82,9 +88,6 @@ func (*Comet_RPC) WriteOnlineMsg(msg *define.Msg, r *myrpc.Reply) (err error) {
 		msg.Typ = ONLINE
 		c.onlines <- msg
 		c.lock.Unlock()
-	}
-	if err == nil {
-		r.IsOk = true
 	}
 	return
 }

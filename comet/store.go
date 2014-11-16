@@ -30,15 +30,23 @@ func (c *clientUs) Get(id string) *client {
 	defer c.l.RUnlock()
 	return c.m[id]
 }
+
 func (c *clientUs) Set(id string, v *client) {
 	c.l.Lock()
 	c.m[id] = v
 	c.l.Unlock()
 }
+
 func (c *clientUs) Del(id string) {
 	c.l.Lock()
 	delete(c.m, id)
 	c.l.Unlock()
+}
+
+func (c *clientUs) Len() int {
+	c.l.RLock()
+	defer c.l.RUnlock()
+	return len(c.m)
 }
 
 type ctrlUs struct {
@@ -51,11 +59,13 @@ func (c *ctrlUs) Get(id string) *ControlServer {
 	defer c.l.RUnlock()
 	return c.m[id]
 }
+
 func (c *ctrlUs) Set(id string, v *ControlServer) {
 	c.l.Lock()
 	c.m[id] = v
 	c.l.Unlock()
 }
+
 func (c *ctrlUs) Del(id string) {
 	c.l.Lock()
 	delete(c.m, id)

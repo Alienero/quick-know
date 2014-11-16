@@ -55,7 +55,7 @@ func TestSendAll(t *testing.T) {
 }
 
 func TestAddPrivateMsg(t *testing.T) {
-	if err := AddPrivateMsg(id, 0, []byte("Private msg2")); err != nil {
+	if err := AddPrivateMsg(id, 0, []byte("Private msg")); err != nil {
 		t.Error(err)
 	} else {
 		println("Pass")
