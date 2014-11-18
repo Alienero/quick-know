@@ -13,13 +13,14 @@ import (
 )
 
 func Init_etcd() error {
+	flush_time := time.Duration(float64(Conf.Etcd_interval) / 1.5)
 	// Connect the etcd.
 	client := etcd.NewClient(Conf.Etcd_addr)
 	_, err := client.Set(Conf.Etcd_dir+"/"+Conf.RPC_addr, "0", Conf.Etcd_interval)
 	if err != nil {
 		return err
 	}
-	c_time := time.NewTicker(time.Duration(Conf.Etcd_interval/2) * time.Second)
+	c_time := time.NewTicker(flush_time * time.Second)
 	go func() {
 		for {
 			select {
