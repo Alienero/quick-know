@@ -1,6 +1,6 @@
 Quick-Know
 ==========
-qk is an High Available push server cluster
+QK is an High Available push server cluster
 
 ##Features
  * Support push private message   
