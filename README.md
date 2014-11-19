@@ -1,12 +1,12 @@
-quick-know
+Quick-Know
 ==========
-qk is a simple and power push server
+qk is an High Available push server cluster
 
 ##Features
  * Support push private message   
  * Support subscription message group   
  * Support a key multi subscription   
- * Will support multi platforms !  
+ * failover support (Etcd)
 
 ## What can qk help you ?
  * quick to set a push system to the mobile phone or destop  
