@@ -21,4 +21,4 @@ Quick-Know是一个高可用的推送集群服务。
 - 完善的Restful API，为用户提供全面的对App操作
 
 ##架构
-[quick-know](https://raw.githubusercontent.com/Alienero/quick-know/master/Documentation/img/qk.png "Quick-know")
+![quick-know](https://raw.githubusercontent.com/Alienero/quick-know/master/Documentation/img/qk.png "Quick-know")
