@@ -7,6 +7,8 @@ package mongodb
 import (
 	"crypto/sha512"
 	"fmt"
+	"io"
+	"strings"
 
 	. "github.com/Alienero/quick-know/store/define"
 
