@@ -21,6 +21,7 @@ type config struct {
 	UserName string // Collection name
 	Clients  string
 	Ctrls    string
+	Salt     string
 
 	MsgAddr     string
 	MsgName     string

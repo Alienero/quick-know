@@ -5,6 +5,7 @@
 package mongodb
 
 import (
+	"crypto/sha512"
 	"fmt"
 
 	. "github.com/Alienero/quick-know/store/define"
@@ -17,6 +18,7 @@ func (mongo *Mongodb) Client_login(id, psw string) bool {
 	defer sei.Refresh()
 	c := sei.DB(Config.UserName).C(Config.Clients)
 	var u = new(User)
+	psw = getSalt(psw)
 	it := c.Find(bson.M{"id": id, "psw": psw}).Iter()
 	defer it.Close()
 	if !it.Next(u) {
@@ -29,6 +31,7 @@ func (mongo *Mongodb) Ctrl_login(id, auth string) (bool, string) {
 	defer sei.Refresh()
 	c := sei.DB(Config.UserName).C(Config.Ctrls)
 	var u = new(Ctrl)
+	auth = getSalt(auth)
 	it := c.Find(bson.M{"auth": auth, "id": id}).Iter()
 	defer it.Close()
 	if !it.Next(u) {
@@ -44,8 +47,10 @@ func (mongo *Mongodb) AddUser(u *User) error {
 	defer sei.Refresh()
 	u.Id = Get_uuid()
 	c := sei.DB(Config.UserName).C(Config.Clients)
+	u.Psw = getSalt(u.Psw)
 	return c.Insert(u)
 }
+
 func (mongo *Mongodb) DelUser(id string, own string) error {
 	if !mongo.IsUserExist(id, own) {
 		return fmt.Errorf("Del a user error:user not found,ID:%v,Own:%v", id, own)
@@ -98,4 +103,10 @@ func (mongo *Mongodb) ChanUserID(own string) <-chan string {
 	}()
 
 	return ch
+}
+
+func getSalt(s string) string {
+	h := sha512.New()
+	io.WriteString(h, s+Config.Salt)
+	return strings.Replace(fmt.Sprintf("% x", h.Sum(nil)), " ", "", -1)
 }
