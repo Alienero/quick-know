@@ -22,6 +22,11 @@ type config struct {
 	Etcd_interval uint64
 	Etcd_dir      string
 
+	Balancer     string // CoreBanlancing or Addr or domain
+	Comet_domain string
+	Comet_port   string
+
+	Comet_addr string
 	// CoreBanlancing conf.
 	Cbl_addr string
 }

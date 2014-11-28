@@ -11,6 +11,7 @@ package main
 import (
 	"errors"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/rpc"
 
@@ -21,16 +22,31 @@ import (
 var http_clinet = new(http.Client)
 
 func get_comet() (string, error) {
-	resp, err := http_clinet.Get(Conf.Cbl_addr + "/get_server")
-	if err != nil {
-		return "", err
+	if Conf.Balancer != "CoreBanlancing" {
+		// TODO: DNS
+		if ips, err := net.LookupIP(Conf.Comet_addr); err != nil {
+			return "", err
+		} else if Conf.Balancer == "domain" {
+			if len(ips) > 0 {
+				return ips[0].String() + Conf.Comet_port, nil
+			}
+			return "", errors.New("RPC:nil IP")
+		} else {
+			return Conf.Comet_addr, nil
+		}
+
+	} else {
+		resp, err := http_clinet.Get(Conf.Cbl_addr + "/get_server")
+		if err != nil {
+			return "", err
+		}
+		data, err := ioutil.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			return "", err
+		}
+		return string(data), nil
 	}
-	data, err := ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
-	if err != nil {
-		return "", err
-	}
-	return string(data), nil
 }
 
 func write_msg(msg *define.Msg) error {
