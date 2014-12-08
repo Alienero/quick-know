@@ -21,6 +21,7 @@ type config struct {
 	Etcd_addr     []string
 	Etcd_interval uint64
 	Etcd_dir      string
+	From_etcd     bool
 
 	Balancer     string // CoreBanlancing or Addr or domain
 	Comet_domain string

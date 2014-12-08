@@ -39,10 +39,6 @@ func main() {
 	if err := InitConf(); err != nil {
 		glog.Fatal(err)
 	}
-	glog.Infoln("Loading store")
-	if err := store.Init(); err != nil {
-		glog.Fatal(err)
-	}
 
 	// Open the RPC listener.
 	glog.Info("Comet RPC Listener Start.")
@@ -55,6 +51,21 @@ func main() {
 	if err := Init_etcd(); err != nil {
 		glog.Fatal(err)
 	}
+
+	sotre_conf := ""
+	if Conf.From_etcd {
+		// Get the Store conf.
+		var err error
+		sotre_conf, err = GetStore()
+		if err != nil {
+			panic(err)
+		}
+	}
+	glog.Infoln("Loading store")
+	if err := store.Init(sotre_conf); err != nil {
+		glog.Fatal(err)
+	}
+
 	signal.HandleSignal(signal.InitSignal())
 	glog.Info("System exit.")
 }

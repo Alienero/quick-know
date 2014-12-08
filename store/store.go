@@ -57,8 +57,8 @@ type DataStorer interface {
 	ChanSubUsers(sub_id string) <-chan string
 }
 
-func Init() (err error) {
-	err = InitConfig()
+func Init(s string) (err error) {
+	err = InitConfig(s)
 	if err != nil {
 		return
 	}

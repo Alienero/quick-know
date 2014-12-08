@@ -33,26 +33,32 @@ type config struct {
 	OfflineMsgs int // The max of the offline msgs
 }
 
-func InitConfig() error {
-	buf := new(bytes.Buffer)
+func InitConfig(s string) error {
+	var data []byte
+	if s == "" {
+		buf := new(bytes.Buffer)
 
-	f, err := os.Open("store.conf")
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	r := bufio.NewReader(f)
-	for {
-		line, err := r.ReadSlice('\n')
+		f, err := os.Open("store.conf")
 		if err != nil {
-			if len(line) > 0 {
+			return err
+		}
+		defer f.Close()
+		r := bufio.NewReader(f)
+		for {
+			line, err := r.ReadSlice('\n')
+			if err != nil {
+				if len(line) > 0 {
+					buf.Write(line)
+				}
+				break
+			}
+			if !strings.HasPrefix(strings.TrimLeft(string(line), "\t "), "//") {
 				buf.Write(line)
 			}
-			break
 		}
-		if !strings.HasPrefix(strings.TrimLeft(string(line), "\t "), "//") {
-			buf.Write(line)
-		}
+		data = buf.Bytes()
+	} else {
+		data = []byte(s)
 	}
-	return json.Unmarshal(buf.Bytes(), Config)
+	return json.Unmarshal(data, Config)
 }
