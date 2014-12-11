@@ -8,40 +8,46 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"flag"
 	"os"
 	"strings"
 )
 
-var Conf = &config{}
+var Conf = config{}
 
 type config struct {
-	Listen_addr string // Client listener addr
+	Listenner struct {
+		Listen_addr    string `json:"-"` // Client listener addr
+		WebSocket_addr string `json:"-"`
+		RPC_addr       string `json:"-"`
+		Tls            bool   `json:"-"`
+	}
 
-	RPC_addr string
+	Restriction struct {
+		WirteLoopChanNum int // Should > 1
+		ReadPackLoop     int
+		MaxCacheMsg      int
+		ReadTimeout      int // Heart beat check (seconds)
+		WriteTimeout     int
+	}
 
-	WirteLoopChanNum int // Should > 1
+	Redis struct {
+		// Redis conf
+		Network    string
+		Address    string
+		MaxIde     int
+		IdeTimeout int // Second.
+	}
 
-	ReadPackLoop int
-
-	MaxCacheMsg int
-
-	ReadTimeout  int // Heart beat check (seconds)
-	WriteTimeout int
-
-	// Redis conf
-	Network    string
-	Address    string
-	MaxIde     int
-	IdeTimeout int // Second.
-
-	// Etcd conf.
-	Etcd_addr     []string
-	Etcd_interval uint64
-	Etcd_dir      string
-	From_etcd     bool
+	Etcd struct {
+		// Etcd conf.
+		Etcd_addr     []string `json:"-"`
+		Etcd_interval uint64
+		Etcd_dir      string
+	}
 }
 
-func InitConf() error {
+func confFromFile(path string) error {
 	buf := new(bytes.Buffer)
 
 	f, err := os.Open("comet.conf")
@@ -63,4 +69,29 @@ func InitConf() error {
 		}
 	}
 	return json.Unmarshal(buf.Bytes(), Conf)
+}
+
+var (
+	path      string
+	etcd_addr string
+)
+
+func init() {
+	flag.StringVar(&path, "path", "", "-path=comet.conf")
+	flag.StringVar(&Conf.Listenner.RPC_addr, "rpc", "", "-rpc=127.0.0.1:8899")
+	flag.StringVar(&Conf.Listenner.Listen_addr, "tcp_listen", "", "-tcp_listen=127.0.0.1:9001")
+	flag.StringVar(&Conf.Listenner.WebSocket_addr, "web_listen", "", "-web_listen=127.0.0.1:9002")
+	flag.BoolVar(&Conf.Listenner.Tls, "tls", false, "-tls=true")
+	flag.StringVar(&etcd_addr, "etcd", "", "-etcd=http://127.0.0.1:4001,http://127.0.0.1:4002,http://127.0.0.1:4003")
+}
+
+func InitConf() error {
+	Conf.Etcd.Etcd_addr = strings.Split(etcd_addr, ",")
+	if *path != "" {
+		if err := confFromFile(path); err != nil {
+			return err
+		}
+		// Set the conf to etcd
+	}
+	// Get config from etcd.
 }

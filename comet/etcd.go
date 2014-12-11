@@ -37,8 +37,24 @@ func Init_etcd() error {
 	return nil
 }
 
-func GetStore() (string, error) {
+func getStoreConf() (string, error) {
 	resp, err := etcd_client.Get("quick-know/store_conf", false, false)
+	if err != nil {
+		return "", err
+	}
+	return resp.Node.Value, nil
+}
+
+func getRedisConf() (string, error) {
+	resp, err := etcd_client.Get("quick-know/redis_conf", false, false)
+	if err != nil {
+		return "", err
+	}
+	return resp.Node.Value, nil
+}
+
+func getRestrictiontConf() (string, error) {
+	resp, err := etcd_client.Get("quick-know/comet_conf", false, false)
 	if err != nil {
 		return "", err
 	}
