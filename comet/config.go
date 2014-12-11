@@ -86,12 +86,5 @@ func init() {
 }
 
 func InitConf() error {
-	Conf.Etcd.Etcd_addr = strings.Split(etcd_addr, ",")
-	if *path != "" {
-		if err := confFromFile(path); err != nil {
-			return err
-		}
-		// Set the conf to etcd
-	}
 	// Get config from etcd.
 }

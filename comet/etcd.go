@@ -5,6 +5,7 @@
 package main
 
 import (
+	"encoding/json"
 	"strconv"
 	"time"
 
@@ -59,4 +60,44 @@ func getRestrictiontConf() (string, error) {
 		return "", err
 	}
 	return resp.Node.Value, nil
+}
+
+func getEtcdConf() (string, error) {
+	resp, err := etcd_client.Get("quick-know/etcd_conf", false, false)
+	if err != nil {
+		return "", err
+	}
+	return resp.Node.Value, nil
+}
+
+func setStoreConf(conf interface{}) error {
+	data, err := json.Marshal(conf)
+	if err != nil {
+		_, err = etcd_client.Set("quick-know/store_conf", string(data), 0)
+	}
+	return err
+}
+
+func setRedisConf(conf interface{}) error {
+	data, err := json.Marshal(conf)
+	if err != nil {
+		_, err = etcd_client.Set("quick-know/redis_conf", string(data), 0)
+	}
+	return err
+}
+
+func setRestrictiontConf(conf interface{}) error {
+	data, err := json.Marshal(conf)
+	if err != nil {
+		_, err = etcd_client.Set("quick-know/comet_conf", string(data), 0)
+	}
+	return err
+}
+
+func setEtcdConf(conf interface{}) error {
+	data, err := json.Marshal(conf)
+	if err != nil {
+		_, err = etcd_client.Set("quick-know/etcd_conf", string(data), 0)
+	}
+	return err
 }
