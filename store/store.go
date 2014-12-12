@@ -62,11 +62,11 @@ func Init(s string) (err error) {
 	if err != nil {
 		return
 	}
-	switch Config.DBType {
+	switch config.DBType {
 	case "mongodb":
 		Manager, err = mongodb.NewMongo()
 	default:
-		err = fmt.Errorf("no such db type(%v) support ", Config.DBType)
+		err = fmt.Errorf("no such db type(%v) support ", config.DBType)
 	}
 	return
 }

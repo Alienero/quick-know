@@ -18,7 +18,7 @@ import (
 func (mongo *Mongodb) Client_login(id, psw string) bool {
 	sei := mongo.sei_user.New()
 	defer sei.Refresh()
-	c := sei.DB(Config.UserName).C(Config.Clients)
+	c := sei.DB(config.UserName).C(config.Clients)
 	var u = new(User)
 	psw = getSalt(psw)
 	it := c.Find(bson.M{"id": id, "psw": psw}).Iter()
@@ -31,7 +31,7 @@ func (mongo *Mongodb) Client_login(id, psw string) bool {
 func (mongo *Mongodb) Ctrl_login(id, auth string) (bool, string) {
 	sei := mongo.sei_user.New()
 	defer sei.Refresh()
-	c := sei.DB(Config.UserName).C(Config.Ctrls)
+	c := sei.DB(config.UserName).C(config.Ctrls)
 	var u = new(Ctrl)
 	auth = getSalt(auth)
 	it := c.Find(bson.M{"auth": auth, "id": id}).Iter()
@@ -48,7 +48,7 @@ func (mongo *Mongodb) AddUser(u *User) error {
 	sei := mongo.sei_user.New()
 	defer sei.Refresh()
 	u.Id = Get_uuid()
-	c := sei.DB(Config.UserName).C(Config.Clients)
+	c := sei.DB(config.UserName).C(config.Clients)
 	u.Psw = getSalt(u.Psw)
 	return c.Insert(u)
 }
@@ -59,12 +59,12 @@ func (mongo *Mongodb) DelUser(id string, own string) error {
 	}
 	sei_m := mongo.sei_msg.New()
 	defer sei_m.Refresh()
-	_, err := sei_m.DB(Config.MsgName).C(Config.SubsName).RemoveAll(bson.M{"user_id": id})
+	_, err := sei_m.DB(config.MsgName).C(config.SubsName).RemoveAll(bson.M{"user_id": id})
 	if err != nil {
 		return err
 	}
 
-	c := mongo.sei_msg.DB(Config.MsgName).C(Config.OfflineName)
+	c := mongo.sei_msg.DB(config.MsgName).C(config.OfflineName)
 	defer mongo.sei_msg.Refresh()
 	if _, err = c.RemoveAll(bson.M{"m.to_id": id}); err != nil {
 		return err
@@ -72,7 +72,7 @@ func (mongo *Mongodb) DelUser(id string, own string) error {
 
 	sei := mongo.sei_user.New()
 	defer sei.Refresh()
-	c = sei.DB(Config.UserName).C(Config.Clients)
+	c = sei.DB(config.UserName).C(config.Clients)
 	err = c.Remove(bson.M{"id": id, "owner": own})
 	if err != nil {
 		return err
@@ -84,7 +84,7 @@ func (mongo *Mongodb) IsUserExist(uid, oid string) bool {
 	sei := mongo.sei_user.New()
 	defer sei.Refresh()
 	u := new(User)
-	it := sei.DB(Config.UserName).C(Config.Clients).Find(bson.M{"id": uid, "owner": oid}).Iter()
+	it := sei.DB(config.UserName).C(config.Clients).Find(bson.M{"id": uid, "owner": oid}).Iter()
 	defer it.Close()
 	return it.Next(u)
 }
@@ -94,7 +94,7 @@ func (mongo *Mongodb) ChanUserID(own string) <-chan string {
 	ch := make(chan string, 100)
 	go func() {
 		sei := mongo.sei_user.New()
-		it := sei.DB(Config.UserName).C(Config.Clients).Find(bson.M{"owner": own}).Iter()
+		it := sei.DB(config.UserName).C(config.Clients).Find(bson.M{"owner": own}).Iter()
 		u := new(User)
 		for it.Next(u) {
 			ch <- u.Id
@@ -109,6 +109,6 @@ func (mongo *Mongodb) ChanUserID(own string) <-chan string {
 
 func getSalt(s string) string {
 	h := sha512.New()
-	io.WriteString(h, s+Config.Salt)
+	io.WriteString(h, s+config.Salt)
 	return strings.Replace(fmt.Sprintf("% x", h.Sum(nil)), " ", "", -1)
 }

@@ -11,6 +11,11 @@ import (
 	"os"
 	"strings"
 
+	// Import config define
+	comet "github.com/Alienero/quick-know/comet/config"
+	web "github.com/Alienero/quick-know/store/define"
+	store "github.com/Alienero/quick-know/web/config"
+
 	"github.com/coreos/go-etcd/etcd"
 )
 
@@ -31,6 +36,18 @@ func init() {
 	}
 }
 
+type config struct {
+	Comet struct {
+		comet.Etcd
+		comet.Redis
+		comet.Restriction
+	}
+}
+
 func main() {
 
+}
+
+func readFile(path string) ([]byte, error) {
+	return ioutil.ReadFile(path)
 }

@@ -12,9 +12,9 @@ import (
 	"strings"
 )
 
-var Config = new(config)
+var config = new(Config)
 
-type config struct {
+type Config struct {
 	DBType string
 
 	UserAddr string // DB addr
@@ -60,5 +60,5 @@ func InitConfig(s string) error {
 	} else {
 		data = []byte(s)
 	}
-	return json.Unmarshal(data, Config)
+	return json.Unmarshal(data, config)
 }

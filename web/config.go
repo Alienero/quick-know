@@ -10,27 +10,11 @@ import (
 	"encoding/json"
 	"os"
 	"strings"
+
+	"github.com/Alienero/quick-know/web/config"
 )
 
-var Conf = new(config)
-
-type config struct {
-	Listen_addr string
-
-	// Etcd conf.
-	Etcd_addr     []string
-	Etcd_interval uint64
-	Etcd_dir      string
-	From_etcd     bool
-
-	Balancer     string // CoreBanlancing or Addr or domain
-	Comet_domain string
-	Comet_port   string
-
-	Comet_addr string
-	// CoreBanlancing conf.
-	Cbl_addr string
-}
+var Conf = new(config.Config)
 
 func InitConf() error {
 	buf := new(bytes.Buffer)

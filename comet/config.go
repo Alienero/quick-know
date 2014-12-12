@@ -11,41 +11,11 @@ import (
 	"flag"
 	"os"
 	"strings"
+
+	"github.com/Alienero/quick-know/comet/config"
 )
 
-var Conf = config{}
-
-type config struct {
-	Listenner struct {
-		Listen_addr    string `json:"-"` // Client listener addr
-		WebSocket_addr string `json:"-"`
-		RPC_addr       string `json:"-"`
-		Tls            bool   `json:"-"`
-	}
-
-	Restriction struct {
-		WirteLoopChanNum int // Should > 1
-		ReadPackLoop     int
-		MaxCacheMsg      int
-		ReadTimeout      int // Heart beat check (seconds)
-		WriteTimeout     int
-	}
-
-	Redis struct {
-		// Redis conf
-		Network    string
-		Address    string
-		MaxIde     int
-		IdeTimeout int // Second.
-	}
-
-	Etcd struct {
-		// Etcd conf.
-		Etcd_addr     []string `json:"-"`
-		Etcd_interval uint64
-		Etcd_dir      string
-	}
-}
+var Conf = config.Config{}
 
 func confFromFile(path string) error {
 	buf := new(bytes.Buffer)
