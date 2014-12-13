@@ -1,0 +1,27 @@
+#1
+Add a util package to save the public code.
+
+like this.
+
+util---
+       |
+       |
+       ---etcd---
+       			 |
+       			 |
+       			 ---hb.go
+       			 |
+       			 |
+        		 ---config.go
+       |
+       |
+       ---rpc 
+
+#2
+Add the websockert support.
+
+#3
+Add the tls support.
+
+#4
+Add the benchenmark data.
