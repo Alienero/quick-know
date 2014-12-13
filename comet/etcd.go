@@ -15,10 +15,13 @@ import (
 
 var etcd_client *etcd.Client
 
-func Init_etcd() error {
+func init_etcd() {
+	etcd_client = etcd.NewClient(Conf.Etcd_addr)
+}
+
+func etcd_hb() error {
 	flush_time := time.Duration(float64(Conf.Etcd_interval) / 1.5)
 	// Connect the etcd.
-	etcd_client = etcd.NewClient(Conf.Etcd_addr)
 	_, err := etcd_client.Set(Conf.Etcd_dir+"/"+Conf.RPC_addr, "0", Conf.Etcd_interval)
 	if err != nil {
 		return err

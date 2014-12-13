@@ -11,7 +11,6 @@ package main
 import (
 	"errors"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"net/rpc"
 
@@ -22,19 +21,8 @@ import (
 var http_clinet = new(http.Client)
 
 func get_comet() (string, error) {
-	if Conf.Balancer != "CoreBanlancing" {
-		// TODO: DNS
-		if ips, err := net.LookupIP(Conf.Comet_addr); err != nil {
-			return "", err
-		} else if Conf.Balancer == "domain" {
-			if len(ips) > 0 {
-				return ips[0].String() + Conf.Comet_port, nil
-			}
-			return "", errors.New("RPC:nil IP")
-		} else {
-			return Conf.Comet_addr, nil
-		}
-
+	if Conf.BalancerType != "CoreBanlancing" {
+		return Conf.CometRPC_addr, nil
 	} else {
 		resp, err := http_clinet.Get(Conf.Cbl_addr + "/get_server")
 		if err != nil {

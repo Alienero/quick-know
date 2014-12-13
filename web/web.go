@@ -12,7 +12,6 @@ import (
 	"runtime/pprof"
 
 	"github.com/Alienero/quick-know/signal"
-	"github.com/Alienero/quick-know/store"
 
 	"github.com/golang/glog"
 )
@@ -60,26 +59,8 @@ func main() {
 		glog.Fatal(err)
 	}
 
-	glog.Info("Web listener start.")
+	glog.Info("[Web]: listener start.")
 	go start()
 
-	glog.Info("Web etcd start.")
-	if err := Init_etcd(); err != nil {
-		glog.Fatal(err)
-	}
-
-	glog.Infoln("Loading store")
-	sotre_conf := ""
-	if Conf.From_etcd {
-		// Get the Store conf.
-		var err error
-		sotre_conf, err = GetStore()
-		if err != nil {
-			panic(err)
-		}
-	}
-	if err := store.Init(sotre_conf); err != nil {
-		glog.Fatal(err)
-	}
 	signal.HandleSignal(signal.InitSignal())
 }

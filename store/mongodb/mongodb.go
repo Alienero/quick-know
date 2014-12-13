@@ -17,20 +17,20 @@ type Mongodb struct {
 
 func NewMongo() (mongo *Mongodb, err error) {
 	mongo = new(Mongodb)
-	if err = connect(&mongo.sei_user, config.UserAddr); err != nil {
+	if err = connect(&mongo.sei_user, Config.UserAddr); err != nil {
 		return
 	}
-	err = connect(&mongo.sei_msg, config.MsgAddr)
+	err = connect(&mongo.sei_msg, Config.MsgAddr)
 	return
 }
 
 func connect(sei **mgo.Session, addr string) (err error) {
 	if *sei != nil {
-		sei.Close()
+		(*sei).Close()
 	}
 	*sei, err = mgo.Dial(addr)
-	sei.EnsureSafe(&mgo.Safe{})
-	sei.SetMode(mgo.Monotonic, true)
-	sei.Refresh()
+	(*sei).EnsureSafe(&mgo.Safe{})
+	(*sei).SetMode(mgo.Monotonic, true)
+	(*sei).Refresh()
 	return
 }

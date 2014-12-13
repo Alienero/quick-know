@@ -11,7 +11,6 @@ import (
 	"runtime/pprof"
 
 	"github.com/Alienero/quick-know/signal"
-	"github.com/Alienero/quick-know/store"
 
 	"github.com/golang/glog"
 )
@@ -46,25 +45,6 @@ func main() {
 	// Open the cliens's server
 	glog.Info("Comet client Listener Start.")
 	go startListen(CLIENT, Conf.Listen_addr)
-	// Reg the comet server, and open the etcd keeper.
-	glog.Info("Comet etcd Start.")
-	if err := Init_etcd(); err != nil {
-		glog.Fatal(err)
-	}
-
-	sotre_conf := ""
-	if Conf.From_etcd {
-		// Get the Store conf.
-		var err error
-		sotre_conf, err = GetStore()
-		if err != nil {
-			panic(err)
-		}
-	}
-	glog.Infoln("Loading store")
-	if err := store.Init(sotre_conf); err != nil {
-		glog.Fatal(err)
-	}
 
 	signal.HandleSignal(signal.InitSignal())
 	glog.Info("System exit.")

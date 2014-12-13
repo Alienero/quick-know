@@ -13,10 +13,13 @@ import (
 
 var client *etcd.Client
 
-func Init_etcd() error {
+func init_etcd() {
+	client = etcd.NewClient(Conf.Etcd_addr)
+}
+
+func etcd_hb() error {
 	flush_time := time.Duration(float64(Conf.Etcd_interval) / 1.5)
 	// Connect the etcd.
-	client = etcd.NewClient(Conf.Etcd_addr)
 	_, err := client.Set(Conf.Etcd_dir+"/"+Conf.Listen_addr, "running", Conf.Etcd_interval)
 	if err != nil {
 		return err
@@ -38,6 +41,14 @@ func Init_etcd() error {
 
 func GetStore() (string, error) {
 	resp, err := client.Get("quick-know/store_conf", false, false)
+	if err != nil {
+		return "", err
+	}
+	return resp.Node.Value, nil
+}
+
+func GetWeb() (string, error) {
+	resp, err := client.Get("quick-know/web_conf", false, false)
 	if err != nil {
 		return "", err
 	}

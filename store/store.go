@@ -5,6 +5,7 @@
 package store
 
 import (
+	"encoding/json"
 	"fmt"
 
 	. "github.com/Alienero/quick-know/store/define"
@@ -57,16 +58,15 @@ type DataStorer interface {
 	ChanSubUsers(sub_id string) <-chan string
 }
 
-func Init(s string) (err error) {
-	err = InitConfig(s)
-	if err != nil {
+func Init(data []byte) (err error) {
+	if err = json.Unmarshal(data, &Config); err != nil {
 		return
 	}
-	switch config.DBType {
+	switch Config.DBType {
 	case "mongodb":
 		Manager, err = mongodb.NewMongo()
 	default:
-		err = fmt.Errorf("no such db type(%v) support ", config.DBType)
+		err = fmt.Errorf("no such db type(%v) support ", Config.DBType)
 	}
 	return
 }

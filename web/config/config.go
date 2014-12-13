@@ -5,19 +5,16 @@
 package config
 
 type Config struct {
-	Listen_addr string
+	Tls         bool   `jsong:"-"`
+	Listen_addr string `json:"-"`
 
-	// Etcd conf.
-	Etcd_addr     []string
-	Etcd_interval uint64
-	Etcd_dir      string
-	From_etcd     bool
-
-	Balancer     string // CoreBanlancing or Addr or domain
-	Comet_domain string
-	Comet_port   string
-
-	Comet_addr string
+	BalancerType  string // CoreBanlancing or Addr or domain
+	CometRPC_addr string
 	// CoreBanlancing conf.
 	Cbl_addr string
+
+	// Etcd conf.
+	Etcd_addr     []string `json:"-"`
+	Etcd_interval uint64
+	Etcd_dir      string
 }

@@ -17,12 +17,12 @@ import (
 func (mongo *Mongodb) GetOfflineMsg(id string, fin <-chan byte) (<-chan *Msg_id, <-chan byte) {
 	// defer recover()
 	// Find in the db
-	ch := make(chan *Msg_id, config.OfflineMsgs)
+	ch := make(chan *Msg_id, Config.OfflineMsgs)
 	ch2 := make(chan byte, 1)
 	go func() {
 		sei := mongo.sei_msg.New()
-		c := sei.DB(config.MsgName).C(config.OfflineName)
-		iter := c.Find(bson.M{"m.to_id": id}).Limit(config.OfflineMsgs).Iter()
+		c := sei.DB(Config.MsgName).C(Config.OfflineName)
+		iter := c.Find(bson.M{"m.to_id": id}).Limit(Config.OfflineMsgs).Iter()
 		msg_id := new(Msg_id)
 		flag := false
 	loop:
@@ -55,7 +55,7 @@ func (mongo *Mongodb) GetOfflineMsg(id string, fin <-chan byte) (<-chan *Msg_id,
 
 // Should delete.
 // func (mongo *Mongodb) GetOfflineCount(id string) (int, error) {
-// 	c := mongo.sei_msg.DB(config.MsgName).C(config.OfflineName)
+// 	c := mongo.sei_msg.DB(Config.MsgName).C(Config.OfflineName)
 // 	defer mongo.sei_msg.Refresh()
 // 	msg := new(Msg)
 // 	if err := c.Find(bson.M{"to_id": id}).Sort("msg_id", "-1").One(&msg); err != nil {
@@ -66,7 +66,7 @@ func (mongo *Mongodb) GetOfflineMsg(id string, fin <-chan byte) (<-chan *Msg_id,
 
 // Del the offile msg
 func (mongo *Mongodb) DelOfflineMsg(id string) error {
-	c := mongo.sei_msg.DB(config.MsgName).C(config.OfflineName)
+	c := mongo.sei_msg.DB(Config.MsgName).C(Config.OfflineName)
 	defer mongo.sei_msg.Refresh()
 	err := c.Remove(bson.M{"id": id})
 	if err != nil {
@@ -78,7 +78,7 @@ func (mongo *Mongodb) DelOfflineMsg(id string) error {
 // Intert a new offilne msg
 // Before should check the to_id belong the user
 func (mongo *Mongodb) InsertOfflineMsg(msg *Msg) error {
-	c := mongo.sei_msg.DB(config.MsgName).C(config.OfflineName)
+	c := mongo.sei_msg.DB(Config.MsgName).C(Config.OfflineName)
 	defer mongo.sei_msg.Refresh()
 	id := Get_uuid()
 	err := c.Insert(&Msg_id{

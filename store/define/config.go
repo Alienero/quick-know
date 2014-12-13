@@ -4,17 +4,17 @@
 
 package define
 
-import (
-	"bufio"
-	"bytes"
-	"encoding/json"
-	"os"
-	"strings"
-)
+// import (
+// 	"bufio"
+// 	"bytes"
+// 	"encoding/json"
+// 	"os"
+// 	"strings"
+// )
 
-var config = new(Config)
+var Config = new(DBConfig)
 
-type Config struct {
+type DBConfig struct {
 	DBType string
 
 	UserAddr string // DB addr
@@ -33,32 +33,32 @@ type Config struct {
 	OfflineMsgs int // The max of the offline msgs
 }
 
-func InitConfig(s string) error {
-	var data []byte
-	if s == "" {
-		buf := new(bytes.Buffer)
+// func InitConfig(s string) error {
+// 	var data []byte
+// 	if s == "" {
+// 		buf := new(bytes.Buffer)
 
-		f, err := os.Open("store.conf")
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-		r := bufio.NewReader(f)
-		for {
-			line, err := r.ReadSlice('\n')
-			if err != nil {
-				if len(line) > 0 {
-					buf.Write(line)
-				}
-				break
-			}
-			if !strings.HasPrefix(strings.TrimLeft(string(line), "\t "), "//") {
-				buf.Write(line)
-			}
-		}
-		data = buf.Bytes()
-	} else {
-		data = []byte(s)
-	}
-	return json.Unmarshal(data, config)
-}
+// 		f, err := os.Open("store.conf")
+// 		if err != nil {
+// 			return err
+// 		}
+// 		defer f.Close()
+// 		r := bufio.NewReader(f)
+// 		for {
+// 			line, err := r.ReadSlice('\n')
+// 			if err != nil {
+// 				if len(line) > 0 {
+// 					buf.Write(line)
+// 				}
+// 				break
+// 			}
+// 			if !strings.HasPrefix(strings.TrimLeft(string(line), "\t "), "//") {
+// 				buf.Write(line)
+// 			}
+// 		}
+// 		data = buf.Bytes()
+// 	} else {
+// 		data = []byte(s)
+// 	}
+// 	return json.Unmarshal(data, Config)
+// }
