@@ -5,6 +5,9 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
+	"encoding/json"
 	"flag"
 	"io/ioutil"
 	"log"
@@ -13,27 +16,27 @@ import (
 
 	// Import config define
 	comet "github.com/Alienero/quick-know/comet/config"
-	web "github.com/Alienero/quick-know/store/define"
-	store "github.com/Alienero/quick-know/web/config"
+	store "github.com/Alienero/quick-know/store/define"
+	web "github.com/Alienero/quick-know/web/config"
 
 	"github.com/coreos/go-etcd/etcd"
 )
 
 var (
 	path     = flag.String("path", "", "-path=qk.conf")
-	etcds    []string
-	etcd_tmp string
+	etcd_tmp = flag.String("etcd", "", "-etcd=http://127.0.0.1:4001,http://127.0.0.1:4002,http://127.0.0.1:4003")
 
 	logger = log.New(os.Stdout, "qk_conf", log.Ltime|log.Lshortfile|log.LstdFlags)
+
+	Conf = config{}
+
+	etcdClient = *etcd.Client
 )
 
 func init() {
 	flag.Parse()
-	etcds = strings.Split(etcd_tmp, ",")
-	data, err := ioutil.ReadFile(*path)
-	if err != nil {
-		logger.Panic(err)
-	}
+	// Init etcd.
+	etcdClient = etcd.NewClient(strings.Split(*etcd_tmp, ","))
 }
 
 type config struct {
@@ -42,12 +45,43 @@ type config struct {
 		comet.Redis
 		comet.Restriction
 	}
+	Web   web.Config
+	Store store.DBConfig
 }
 
 func main() {
-
+	// Read config.
+	if err := readFile(*path); err != nil {
+		logger.Panic(err)
+	}
+	// Share config.
 }
 
-func readFile(path string) ([]byte, error) {
-	return ioutil.ReadFile(path)
+func readFile(path string) error {
+	var data []byte
+	buf := new(bytes.Buffer)
+	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	r := bufio.NewReader(f)
+	for {
+		line, err := r.ReadSlice('\n')
+		if err != nil {
+			if len(line) > 0 {
+				buf.Write(line)
+			}
+			break
+		}
+		if !strings.HasPrefix(strings.TrimLeft(string(line), "\t "), "//") {
+			buf.Write(line)
+		}
+	}
+	data = buf.Bytes()
+	return json.Unmarshal(data, &Conf)
+}
+
+func setNode(node string, vaule string) error {
+
 }
