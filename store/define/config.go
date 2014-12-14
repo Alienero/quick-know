@@ -4,61 +4,22 @@
 
 package define
 
-// import (
-// 	"bufio"
-// 	"bytes"
-// 	"encoding/json"
-// 	"os"
-// 	"strings"
-// )
-
 var Config = new(DBConfig)
 
 type DBConfig struct {
 	DBType string
 
-	UserAddr string // DB addr
-	UserName string // Collection name
+	UserAddr string // DB addr.
+	UserName string // DB name.
 	Clients  string
 	Ctrls    string
-	Salt     string
+	Salt     string // Sha512's salt.
 
-	MsgAddr     string
-	MsgName     string
-	OfflineName string
+	MsgAddr     string // DB addr.
+	MsgName     string // DB name.
+	OfflineName string // Collection name.
+	SubName     string // Collection name.
+	SubsName    string // Collection name.
 
-	SubName  string
-	SubsName string
-
-	OfflineMsgs int // The max of the offline msgs
+	OfflineMsgs int // The max of the offline msgs.
 }
-
-// func InitConfig(s string) error {
-// 	var data []byte
-// 	if s == "" {
-// 		buf := new(bytes.Buffer)
-
-// 		f, err := os.Open("store.conf")
-// 		if err != nil {
-// 			return err
-// 		}
-// 		defer f.Close()
-// 		r := bufio.NewReader(f)
-// 		for {
-// 			line, err := r.ReadSlice('\n')
-// 			if err != nil {
-// 				if len(line) > 0 {
-// 					buf.Write(line)
-// 				}
-// 				break
-// 			}
-// 			if !strings.HasPrefix(strings.TrimLeft(string(line), "\t "), "//") {
-// 				buf.Write(line)
-// 			}
-// 		}
-// 		data = buf.Bytes()
-// 	} else {
-// 		data = []byte(s)
-// 	}
-// 	return json.Unmarshal(data, Config)
-// }

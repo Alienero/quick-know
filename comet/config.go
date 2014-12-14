@@ -5,45 +5,17 @@
 package main
 
 import (
-	// "bufio"
-	// "bytes"
-	// "os"
-	"encoding/json"
 	"flag"
 	"strings"
 
 	"github.com/Alienero/quick-know/comet/config"
 	"github.com/Alienero/quick-know/store"
+	"github.com/Alienero/quick-know/utils/json"
 )
 
 var Conf = config.Config{}
 
-// func confFromFile(path string) error {
-// 	buf := new(bytes.Buffer)
-
-// 	f, err := os.Open("comet.conf")
-// 	if err != nil {
-// 		return err
-// 	}
-// 	defer f.Close()
-// 	r := bufio.NewReader(f)
-// 	for {
-// 		line, err := r.ReadSlice('\n')
-// 		if err != nil {
-// 			if len(line) > 0 {
-// 				buf.Write(line)
-// 			}
-// 			break
-// 		}
-// 		if !strings.HasPrefix(strings.TrimLeft(string(line), "\t "), "//") {
-// 			buf.Write(line)
-// 		}
-// 	}
-// 	return json.Unmarshal(buf.Bytes(), Conf)
-// }
-
 var (
-	// path      string
 	etcd_addr string
 )
 
@@ -62,15 +34,15 @@ func InitConf() error {
 	Conf.Etcd_addr = strings.Split(etcd_addr, ",")
 	init_etcd()
 	// Get the etcd config.
-	if err := unmarshal(getEtcdConf, &Conf.Etcd); err != nil {
+	if err := json.Getter(getEtcdConf, &Conf.Etcd); err != nil {
 		return err
 	}
 	// Get the redis config.
-	if err := unmarshal(getRedisConf, &Conf.Redis); err != nil {
+	if err := json.Getter(getRedisConf, &Conf.Redis); err != nil {
 		return err
 	}
 	// Get the Restrictiont config.
-	if err := unmarshal(getRestrictiontConf, &Conf.Restriction); err != nil {
+	if err := json.Getter(getRestrictiontConf, &Conf.Restriction); err != nil {
 		return err
 	}
 	// Get the store config.
@@ -83,12 +55,4 @@ func InitConf() error {
 	}
 	// Start etcd hb.
 	return etcd_hb()
-}
-
-func unmarshal(getter func() (string, error), v interface{}) error {
-	if str, err := getter(); err != nil {
-		return err
-	} else {
-		return json.Unmarshal([]byte(str), v)
-	}
 }

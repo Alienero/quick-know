@@ -9,13 +9,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"flag"
-	"io/ioutil"
 	"log"
 	"os"
 	"strings"
 
 	// Import config define
 	comet "github.com/Alienero/quick-know/comet/config"
+	define "github.com/Alienero/quick-know/config"
 	store "github.com/Alienero/quick-know/store/define"
 	web "github.com/Alienero/quick-know/web/config"
 
@@ -30,7 +30,7 @@ var (
 
 	Conf = config{}
 
-	etcdClient = *etcd.Client
+	etcdClient = new(etcd.Client)
 )
 
 func init() {
@@ -45,19 +45,55 @@ type config struct {
 		comet.Redis
 		comet.Restriction
 	}
-	Web   web.Config
+	Web struct {
+		web.Balancer
+		web.Etcd
+	}
 	Store store.DBConfig
 }
 
 func main() {
 	// Read config.
-	if err := readFile(*path); err != nil {
+	if err := readFileInto(*path); err != nil {
 		logger.Panic(err)
 	}
 	// Share config.
+	logger.Println("Set Comet's config...")
+	logger.Println("->Do comet.Etcd")
+	if err := setNode(define.Etcd_comet_etcd, &Conf.Comet.Etcd); err != nil {
+		logger.Fatal(err)
+	}
+	logger.Println("Done.")
+	logger.Println("->Do comet.Redis")
+	if err := setNode(define.Etcd_comet_redis, &Conf.Comet.Redis); err != nil {
+		logger.Fatal(err)
+	}
+	logger.Println("Done.")
+	logger.Println("->Do comet.Restriction")
+	if err := setNode(define.Etcd_comet_rest, &Conf.Comet.Restriction); err != nil {
+		logger.Fatal(err)
+	}
+	logger.Println("Done.")
+	logger.Println("Do web.Balancer")
+	if err := setNode(define.Etcd_web_balancer, &Conf.Web.Balancer); err != nil {
+		logger.Fatal(err)
+	}
+	logger.Println("Done.")
+	logger.Println("Do web.Etcd")
+	if err := setNode(define.Etcd_web_etcd, &Conf.Web.Etcd); err != nil {
+		logger.Fatal(err)
+	}
+	logger.Println("Done.")
+	logger.Println("Do store.")
+	if err := setNode(define.Etcd_store, &Conf.Store); err != nil {
+		logger.Fatal(err)
+	}
+	logger.Println("Done.")
+
+	logger.Println("Shared!")
 }
 
-func readFile(path string) error {
+func readFileInto(path string) error {
 	var data []byte
 	buf := new(bytes.Buffer)
 	f, err := os.Open(path)
@@ -82,6 +118,11 @@ func readFile(path string) error {
 	return json.Unmarshal(data, &Conf)
 }
 
-func setNode(node string, vaule string) error {
-
+func setNode(node string, v interface{}) error {
+	data, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	_, err = etcdClient.Set(node, string(data), 0)
+	return err
 }

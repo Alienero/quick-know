@@ -7,6 +7,8 @@ package main
 import (
 	"time"
 
+	"github.com/Alienero/quick-know/config"
+
 	"github.com/coreos/go-etcd/etcd"
 	"github.com/golang/glog"
 )
@@ -39,16 +41,24 @@ func etcd_hb() error {
 	return nil
 }
 
-func GetStore() (string, error) {
-	resp, err := client.Get("quick-know/store_conf", false, false)
+func getStore() (string, error) {
+	resp, err := client.Get(config.Etcd_store, false, false)
 	if err != nil {
 		return "", err
 	}
 	return resp.Node.Value, nil
 }
 
-func GetWeb() (string, error) {
-	resp, err := client.Get("quick-know/web_conf", false, false)
+func getBalancer() (string, error) {
+	resp, err := client.Get(config.Etcd_web_balancer, false, false)
+	if err != nil {
+		return "", err
+	}
+	return resp.Node.Value, nil
+}
+
+func getEtcd() (string, error) {
+	resp, err := client.Get(config.Etcd_web_etcd, false, false)
 	if err != nil {
 		return "", err
 	}

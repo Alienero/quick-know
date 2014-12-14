@@ -5,41 +5,16 @@
 package main
 
 import (
-	// "bufio"
-	// "bytes"
-	"encoding/json"
+	// "encoding/json"
 	"flag"
-	// "os"
 	"strings"
 
 	"github.com/Alienero/quick-know/store"
+	"github.com/Alienero/quick-know/utils/json"
 	"github.com/Alienero/quick-know/web/config"
 )
 
 var Conf = config.Config{}
-
-// func InitConf() error {
-// 	buf := new(bytes.Buffer)
-// 	f, err := os.Open("web.conf")
-// 	if err != nil {
-// 		return err
-// 	}
-// 	defer f.Close()
-// 	r := bufio.NewReader(f)
-// 	for {
-// 		line, err := r.ReadSlice('\n')
-// 		if err != nil {
-// 			if len(line) > 0 {
-// 				buf.Write(line)
-// 			}
-// 			break
-// 		}
-// 		if !strings.HasPrefix(strings.TrimLeft(string(line), "\t "), "//") {
-// 			buf.Write(line)
-// 		}
-// 	}
-// 	return json.Unmarshal(buf.Bytes(), Conf)
-// }
 
 var etcd_addr_temp string
 
@@ -55,7 +30,7 @@ func InitConf() error {
 	Conf.Etcd_addr = strings.Split(etcd_addr_temp, ",")
 	init_etcd()
 	// Get store config.
-	storeConf, err := GetStore()
+	storeConf, err := getStore()
 	if err != nil {
 		return err
 	}
@@ -63,12 +38,13 @@ func InitConf() error {
 		return err
 	}
 	// Get web config.
-	if webConf, err := GetWeb(); err != nil {
+	// Get balancer config.
+	if err := json.Getter(getBalancer, &Conf.Balancer); err != nil {
 		return err
-	} else {
-		if err = json.Unmarshal([]byte(webConf), &Conf); err != nil {
-			return err
-		}
+	}
+	// Get etcd config.
+	if err := json.Getter(getEtcd, &Conf.Etcd); err != nil {
+		return err
 	}
 
 	return etcd_hb()

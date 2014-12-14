@@ -5,9 +5,10 @@
 package main
 
 import (
-	"encoding/json"
 	"strconv"
 	"time"
+
+	define "github.com/Alienero/quick-know/config"
 
 	"github.com/coreos/go-etcd/etcd"
 	"github.com/golang/glog"
@@ -42,7 +43,7 @@ func etcd_hb() error {
 }
 
 func getStoreConf() (string, error) {
-	resp, err := etcd_client.Get("quick-know/store_conf", false, false)
+	resp, err := etcd_client.Get(define.Etcd_store, false, false)
 	if err != nil {
 		return "", err
 	}
@@ -50,7 +51,7 @@ func getStoreConf() (string, error) {
 }
 
 func getRedisConf() (string, error) {
-	resp, err := etcd_client.Get("quick-know/redis_conf", false, false)
+	resp, err := etcd_client.Get(define.Etcd_comet_redis, false, false)
 	if err != nil {
 		return "", err
 	}
@@ -58,7 +59,7 @@ func getRedisConf() (string, error) {
 }
 
 func getRestrictiontConf() (string, error) {
-	resp, err := etcd_client.Get("quick-know/comet_conf", false, false)
+	resp, err := etcd_client.Get(define.Etcd_comet_rest, false, false)
 	if err != nil {
 		return "", err
 	}
@@ -66,41 +67,41 @@ func getRestrictiontConf() (string, error) {
 }
 
 func getEtcdConf() (string, error) {
-	resp, err := etcd_client.Get("quick-know/etcd_conf", false, false)
+	resp, err := etcd_client.Get(define.Etcd_comet_etcd, false, false)
 	if err != nil {
 		return "", err
 	}
 	return resp.Node.Value, nil
 }
 
-func setStoreConf(conf interface{}) error {
-	data, err := json.Marshal(conf)
-	if err != nil {
-		_, err = etcd_client.Set("quick-know/store_conf", string(data), 0)
-	}
-	return err
-}
+// func setStoreConf(conf interface{}) error {
+// 	data, err := json.Marshal(conf)
+// 	if err != nil {
+// 		_, err = etcd_client.Set("quick-know/store_conf", string(data), 0)
+// 	}
+// 	return err
+// }
 
-func setRedisConf(conf interface{}) error {
-	data, err := json.Marshal(conf)
-	if err != nil {
-		_, err = etcd_client.Set("quick-know/redis_conf", string(data), 0)
-	}
-	return err
-}
+// func setRedisConf(conf interface{}) error {
+// 	data, err := json.Marshal(conf)
+// 	if err != nil {
+// 		_, err = etcd_client.Set("quick-know/redis_conf", string(data), 0)
+// 	}
+// 	return err
+// }
 
-func setRestrictiontConf(conf interface{}) error {
-	data, err := json.Marshal(conf)
-	if err != nil {
-		_, err = etcd_client.Set("quick-know/comet_conf", string(data), 0)
-	}
-	return err
-}
+// func setRestrictiontConf(conf interface{}) error {
+// 	data, err := json.Marshal(conf)
+// 	if err != nil {
+// 		_, err = etcd_client.Set("quick-know/comet_conf", string(data), 0)
+// 	}
+// 	return err
+// }
 
-func setEtcdConf(conf interface{}) error {
-	data, err := json.Marshal(conf)
-	if err != nil {
-		_, err = etcd_client.Set("quick-know/etcd_conf", string(data), 0)
-	}
-	return err
-}
+// func setEtcdConf(conf interface{}) error {
+// 	data, err := json.Marshal(conf)
+// 	if err != nil {
+// 		_, err = etcd_client.Set("quick-know/etcd_conf", string(data), 0)
+// 	}
+// 	return err
+// }
