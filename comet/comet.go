@@ -40,10 +40,10 @@ func main() {
 	}
 
 	// Open the RPC listener.
-	glog.Info("Comet RPC Listener Start.")
+	glog.Infof("Comet RPC Listen at:%v", Conf.RPC_addr)
 	go listenRPC()
 	// Open the cliens's server
-	glog.Info("Comet client Listener Start.")
+	glog.Infof("Comet listen at: %v", Conf.Listen_addr)
 	go startListen(CLIENT, Conf.Listen_addr)
 
 	signal.HandleSignal(signal.InitSignal())

@@ -74,17 +74,17 @@ func main() {
 		logger.Fatal(err)
 	}
 	logger.Println("Done.")
-	logger.Println("Do web.Balancer")
+	logger.Println("->Do web.Balancer")
 	if err := setNode(define.Etcd_web_balancer, &Conf.Web.Balancer); err != nil {
 		logger.Fatal(err)
 	}
 	logger.Println("Done.")
-	logger.Println("Do web.Etcd")
+	logger.Println("->Do web.Etcd")
 	if err := setNode(define.Etcd_web_etcd, &Conf.Web.Etcd); err != nil {
 		logger.Fatal(err)
 	}
 	logger.Println("Done.")
-	logger.Println("Do store.")
+	logger.Println("->Do store")
 	if err := setNode(define.Etcd_store, &Conf.Store); err != nil {
 		logger.Fatal(err)
 	}

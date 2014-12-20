@@ -6,6 +6,7 @@ package json
 
 import (
 	"encoding/json"
+	"fmt"
 )
 
 func Getter(call func() (string, error), v interface{}) error {
@@ -13,5 +14,6 @@ func Getter(call func() (string, error), v interface{}) error {
 	if err != nil {
 		return err
 	}
+	fmt.Println("Etcd-->", str)
 	return json.Unmarshal([]byte(str), v)
 }
