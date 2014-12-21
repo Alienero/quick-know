@@ -21,9 +21,9 @@ var (
 
 func init() {
 	// flag.StringVar(&path, "path", "", "-path=comet.conf")
-	flag.StringVar(&Conf.Listenner.RPC_addr, "rpc", "", "-rpc=127.0.0.1:8899")
-	flag.StringVar(&Conf.Listenner.Listen_addr, "tcp_listen", "", "-tcp_listen=127.0.0.1:9001")
-	flag.StringVar(&Conf.Listenner.WebSocket_addr, "web_listen", "", "-web_listen=127.0.0.1:9002")
+	flag.StringVar(&Conf.Listener.RPC_addr, "rpc", "", "-rpc=127.0.0.1:8899")
+	flag.StringVar(&Conf.Listener.Listen_addr, "tcp_listen", "", "-tcp_listen=127.0.0.1:9001")
+	flag.StringVar(&Conf.Listener.WebSocket_addr, "web_listen", "", "-web_listen=127.0.0.1:9002")
 	// flag.BoolVar(&Conf.Listenner.Tls, "tls", false, "-tls=true")
 	flag.StringVar(&etcd_addr, "etcd", "", "-etcd=http://127.0.0.1:4001,http://127.0.0.1:4002,http://127.0.0.1:4003")
 }
@@ -35,6 +35,10 @@ func InitConf() error {
 	init_etcd()
 	// Get the etcd config.
 	if err := json.Getter(getEtcdConf, &Conf.Etcd); err != nil {
+		return err
+	}
+	// Get listener's conf.
+	if err := json.Getter(getListenConf, &Conf.Listener); err != nil {
 		return err
 	}
 	// Get the redis config.

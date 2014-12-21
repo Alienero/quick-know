@@ -11,8 +11,10 @@ type Config struct {
 }
 
 type Listener struct {
-	Tls         bool   `jsong:"-"`
 	Listen_addr string `json:"-"`
+	Tls         bool
+	Cert        []byte
+	Key         []byte
 }
 
 type Balancer struct {

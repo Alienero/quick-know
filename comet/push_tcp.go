@@ -154,27 +154,7 @@ func login(r *bufio.Reader, w *bufio.Writer, conn net.Conn, typ int) (l listener
 				return
 			}
 		}
-		// if tc := Users.Get(*id); tc != nil {
-		// 	tc.lock.Lock()
-		// 	if !tc.isLetClose {
-		// 		tc.isLetClose = true
-		// 		tc.lock.Unlock()
-		// 		select {
-		// 		case tc.CloseChan <- 1:
-		// 			<-tc.CloseChan
-		// 		case <-time.After(2 * time.Second):
-		// 			// Timeout.
-		// 			if tc := Users.Get(*id); tc != nil {
-		// 				return nil, errors.New("Close the logon user timeout")
-		// 			}
-		// 			// Has been esc.
-		// 		}
-		// 	} else {
-		// 		tc.lock.Unlock()
-		// 		return nil, errors.New("Has been relogining")
-		// 	}
 
-		// }
 		c := newClient(r, w, conn, *id, info.GetKeepAlive())
 		// Redis Append.
 		if err = redis_login(*id); err != nil {

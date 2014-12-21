@@ -74,6 +74,14 @@ func getEtcdConf() (string, error) {
 	return resp.Node.Value, nil
 }
 
+func getListenConf() (string, error) {
+	resp, err := etcd_client.Get(define.Etcd_comet_listen, false, false)
+	if err != nil {
+		return "", err
+	}
+	return resp.Node.Value, nil
+}
+
 // func setStoreConf(conf interface{}) error {
 // 	data, err := json.Marshal(conf)
 // 	if err != nil {

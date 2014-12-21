@@ -1,17 +1,19 @@
 package config
 
 type Config struct {
-	Listenner
+	Listener
 	Restriction
 	Redis
 	Etcd
 }
 
-type Listenner struct {
+type Listener struct {
 	Listen_addr    string `json:"-"` // Client listener addr
 	WebSocket_addr string `json:"-"`
 	RPC_addr       string `json:"-"`
 	Tls            bool   `json:"-"`
+	Cert           []byte
+	Key            []byte
 }
 
 type Restriction struct {

@@ -7,8 +7,10 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"flag"
+	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -40,14 +42,24 @@ func init() {
 }
 
 type config struct {
+	OnCometTls bool
+	OnWebTls   bool
+
+	CometCert string
+	CometKey  string
+	WebCert   string
+	WebKey    string
+
 	Comet struct {
 		comet.Etcd
 		comet.Redis
 		comet.Restriction
+		comet.Listener
 	}
 	Web struct {
 		web.Balancer
 		web.Etcd
+		comet.Listener
 	}
 	Store store.DBConfig
 }
@@ -57,10 +69,24 @@ func main() {
 	if err := readFileInto(*path); err != nil {
 		logger.Panic(err)
 	}
+	// Check tls.
+	if Conf.OnCometTls {
+		fileToStruct(Conf.CometCert, &Conf.Comet.Listener.Cert)
+		fileToStruct(Conf.CometKey, &Conf.Comet.Listener.Key)
+	}
+	if Conf.OnWebTls {
+		fileToStruct(Conf.WebCert, &Conf.Web.Listener.Cert)
+		fileToStruct(Conf.WebKey, &Conf.Web.Listener.Key)
+	}
 	// Share config.
 	logger.Println("Set Comet's config...")
 	logger.Println("->Do comet.Etcd")
 	if err := setNode(define.Etcd_comet_etcd, &Conf.Comet.Etcd); err != nil {
+		logger.Fatal(err)
+	}
+	logger.Println("Done.")
+	logger.Println("->Do comet.Listener")
+	if err := setNode(define.Etcd_comet_listen, &Conf.Comet.Listener); err != nil {
 		logger.Fatal(err)
 	}
 	logger.Println("Done.")
@@ -74,6 +100,13 @@ func main() {
 		logger.Fatal(err)
 	}
 	logger.Println("Done.")
+
+	logger.Println("Set Web's config...")
+	logger.Println("->Do web.Listener")
+	if err := setNode(define.Etcd_web_listen, &Conf.Web.Listener); err != nil {
+		logger.Fatal(err)
+	}
+	logger.Println("Done.")
 	logger.Println("->Do web.Balancer")
 	if err := setNode(define.Etcd_web_balancer, &Conf.Web.Balancer); err != nil {
 		logger.Fatal(err)
@@ -84,6 +117,7 @@ func main() {
 		logger.Fatal(err)
 	}
 	logger.Println("Done.")
+	logger.Println("Set Store's config...")
 	logger.Println("->Do store")
 	if err := setNode(define.Etcd_store, &Conf.Store); err != nil {
 		logger.Fatal(err)
@@ -119,10 +153,32 @@ func readFileInto(path string) error {
 }
 
 func setNode(node string, v interface{}) error {
-	data, err := json.Marshal(v)
-	if err != nil {
+	switch v.(type) {
+	case string:
+		// String direct insert etcd.
+		s := v.(string)
+		_, err := etcdClient.Set(node, s, 0)
+		return err
+	case []byte:
+		// Base64 encode.
+		src := v.([]byte)
+		_, err := etcdClient.Set(node, base64.StdEncoding.EncodeToString(src), 0)
+		return err
+	default:
+		data, err := json.Marshal(v)
+		if err != nil {
+			return err
+		}
+		_, err = etcdClient.Set(node, string(data), 0)
 		return err
 	}
-	_, err = etcdClient.Set(node, string(data), 0)
-	return err
+}
+
+// If read the file has an error,it will throws a panic.
+func fileToStruct(path string, ptr *[]byte) {
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		logger.Panic(err)
+	}
+	*ptr = data
 }

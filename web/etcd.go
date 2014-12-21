@@ -64,3 +64,11 @@ func getEtcd() (string, error) {
 	}
 	return resp.Node.Value, nil
 }
+
+func getListener() (string, error) {
+	resp, err := client.Get(config.Etcd_web_listen, false, false)
+	if err != nil {
+		return "", err
+	}
+	return resp.Node.Value, nil
+}
