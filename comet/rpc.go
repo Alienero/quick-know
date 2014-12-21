@@ -92,6 +92,11 @@ func (*Comet_RPC) WriteOnlineMsg(msg *define.Msg, r *myrpc.Reply) (err error) {
 	return
 }
 
+func (*Comet_RPC) Ping(total *int, r *myrpc.Reply) (err error) {
+	r.IsOk = true
+	total = len(Users)
+}
+
 func listenRPC() {
 	comet := new(Comet_RPC)
 	if err := rpc.Register(comet); err != nil {
