@@ -16,7 +16,8 @@ const (
 )
 
 func WsHandle(ws *websocket.Conn) {
-
+	c := newConn(ws, CLIENT)
+	go c.serve()
 }
 
 // If http.ListenandServe return an error,
