@@ -5,7 +5,9 @@
 package main
 
 import (
+	"crypto/tls"
 	"golang.org/x/net/websocket"
+	"net"
 	"net/http"
 )
 
@@ -19,14 +21,29 @@ func WsHandle(ws *websocket.Conn) {
 
 // If http.ListenandServe return an error,
 // it will throws a panic.
-func wsListener(addr string, tls bool) {
+func wsListener() {
 	if err := func() error {
 		httpServeMux := http.NewServeMux()
 		httpServeMux.Handle("/pub", websocket.Handler(WsHandle))
-		// if tls {
-		// 	return http.ListenAndServeTLS(addr, certFile, keyFile, handler)
-		// }
-		return http.ListenAndServe(addr, httpServeMux)
+		var (
+			l   net.Listener
+			err error
+		)
+		if Conf.Tls {
+			tlsConf := new(tls.Config)
+			tlsConf.Certificates = make([]tls.Certificate, 1)
+			tlsConf.Certificates[0], err = tls.X509KeyPair(Conf.Cert, Conf.Key)
+			if err != nil {
+				return err
+			}
+			l, err = tls.Listen("tcp", Conf.WebSocket_addr, tlsConf)
+			if err != nil {
+				return err
+			}
+			return http.Serve(l, httpServeMux)
+		} else {
+			return http.ListenAndServe(Conf.WebSocket_addr, httpServeMux)
+		}
 	}(); err != nil {
 		panic(err)
 	}

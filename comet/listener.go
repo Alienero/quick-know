@@ -6,6 +6,7 @@ package main
 
 import (
 	"bufio"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"net"
@@ -20,13 +21,58 @@ import (
 	"github.com/golang/glog"
 )
 
+type ConnListener struct {
+	listener *net.TCPListener
+}
+
+func newConnListener(l *net.TCPListener) *ConnListener {
+	return &ConnListener{l}
+}
+
+func (l *ConnListener) Accept() (c net.Conn, err error) {
+	var tcp *net.TCPConn
+	tcp, err = l.listener.AcceptTCP()
+	if err != nil {
+		return
+	}
+	// Tcp Setting。
+	if err = tcp.SetKeepAlive(true); err != nil {
+		glog.Errorf("conn.SetKeepAlive() error(%v)", err)
+		return
+	}
+	return tcp, nil
+}
+
+// Close closes the listener.
+// Any blocked Accept operations will be unblocked and return errors.
+func (l *ConnListener) Close() error { return l.listener.Close() }
+
+// Addr returns the listener's network address.
+func (l *ConnListener) Addr() net.Addr { return l.listener.Addr() }
+
 func startListen(typ int, addr string) {
 	err := func() error {
-		var tempDelay time.Duration // how long to sleep on accept failure
-		l, err := net.Listen("tcp", addr)
+		var (
+			tempDelay time.Duration // how long to sleep on accept failure
+			l         net.Listener
+			err       error
+		)
+		l, err = net.Listen("tcp", addr)
 		if err != nil {
 			return err
 		}
+		tl := l.(*net.TCPListener)
+		l = newConnListener(tl)
+		if Conf.Tls {
+			tlsConf := new(tls.Config)
+			tlsConf.Certificates = make([]tls.Certificate, 1)
+			tlsConf.Certificates[0], err = tls.X509KeyPair(Conf.Cert, Conf.Key)
+			if err != nil {
+				glog.Fatal(err)
+			}
+			l = tls.NewListener(l, tlsConf)
+		}
+
 		for {
 			rw, e := l.Accept()
 			if ne, ok := e.(net.Error); ok && ne.Temporary() {
@@ -43,6 +89,7 @@ func startListen(typ int, addr string) {
 				glog.Errorf("http: Accept error: %v; retrying in %v", e, tempDelay)
 				return e
 			}
+
 			c := newConn(rw, typ)
 			go c.serve()
 		}
@@ -81,11 +128,6 @@ func (c *conn) serve() {
 		c.rw.Close()
 
 	}()
-	tcp := c.rw.(*net.TCPConn)
-	if err = tcp.SetKeepAlive(true); err != nil {
-		glog.Errorf("conn.SetKeepAlive() error(%v)\n", err)
-		return
-	}
 
 	var l listener
 	if l, err = login(c.r, c.w, c.rw, c.typ); err != nil {
