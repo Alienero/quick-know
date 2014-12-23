@@ -53,14 +53,11 @@ func (*Comet_RPC) WriteOnlineMsg(msg *define.Msg, r *myrpc.Reply) (err error) {
 	defer func() {
 		if err == nil {
 			r.IsOk = true
+		} else {
+			glog.Error(err)
 		}
 	}()
-	glog.Infof("Get a Write msg RPC,msg is :%v", string(msg.Body))
-	msg.Dup = 0
-	// fix the Expired
-	if msg.Expired > 0 {
-		msg.Expired = time.Now().UTC().Add(time.Duration(msg.Expired)).Unix()
-	}
+	glog.Info("Get a Write Online msg RPC")
 
 	c := Users.Get(msg.To_id)
 	if c == nil {
@@ -92,9 +89,53 @@ func (*Comet_RPC) WriteOnlineMsg(msg *define.Msg, r *myrpc.Reply) (err error) {
 	return
 }
 
+func (c *Comet_RPC) WriteMsg(msg *define.Msg, r *myrpc.Reply) (err error) {
+	msg.Dup = 0
+	// Fix the Expired
+	if msg.Expired > 0 {
+		msg.Expired = time.Now().UTC().Add(time.Duration(msg.Expired)).Unix()
+	}
+	// Check the user whether online.
+	b, addr, err := redis_isExist(msg.To_id)
+	if !b {
+		if err != nil {
+			glog.Error(err)
+		}
+		// User is offline.
+		err = store.Manager.InsertOfflineMsg(msg)
+		if err != nil {
+			glog.Error(err)
+		} else {
+			// nil error.
+			r.IsOk = true
+		}
+		return err
+	}
+	// User is online.
+	if addr == Conf.RPC_addr {
+		// Call local comet.
+		return c.WriteOnlineMsg(msg, r)
+	} else {
+		// RPC.
+		c, err := rpc.DialHTTP("tcp", addr)
+		if err != nil {
+			return err
+		}
+		reply := new(myrpc.Reply)
+		if err = c.Call("Comet_RPC.WriteOnlineMsg", msg, reply); err != nil {
+			return err
+		}
+		r.IsRe = reply.IsRe
+		r.IsOk = reply.IsOk
+		return nil
+	}
+}
+
 func (*Comet_RPC) Ping(total *int, r *myrpc.Reply) (err error) {
 	r.IsOk = true
-	total = len(Users)
+	l := Users.Len()
+	total = &l
+	return nil
 }
 
 func listenRPC() {

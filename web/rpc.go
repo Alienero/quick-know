@@ -47,11 +47,11 @@ func write_msg(msg *define.Msg) error {
 		return err
 	}
 	reply := new(myrpc.Reply)
-	if err = c.Call("Comet_RPC.WriteOnlineMsg", msg, reply); err != nil {
+	if err = c.Call("Comet_RPC.WriteMsg", msg, reply); err != nil {
 		return err
 	}
 	if !reply.IsOk {
-		err = errors.New("RPC:wirte msg fail:%v")
+		err = errors.New("RPC:wirte msg fail")
 	}
 	return err
 }
