@@ -25,3 +25,9 @@ Add the tls support.
 
 #4
 Add the benchenmark data.
+
+#5
+Using mongodb sub&pub instead of online msg and offline msg storage.
+
+#6
+Add a new ID flag a store package's user. NOT: uuid will be repeated.
