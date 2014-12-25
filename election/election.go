@@ -6,7 +6,17 @@
 // election the leader of the cluster.
 package election
 
-type Cluster struct{}
+import (
+	"time"
+)
+
+type Cluster struct {
+	// etcd information.
+	etcd_dir    string
+	etcd_nodes  string
+	etcd_leader string
+	interval    time.Duration
+}
 
 func GetCluster() {}
 
@@ -18,5 +28,6 @@ func NewNode() *Node {
 }
 
 var (
-	node *Node
+	node    *Node
+	cluster *Cluster
 )
