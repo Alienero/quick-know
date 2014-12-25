@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package election
+package etcd
 
 import (
 	"time"
@@ -11,24 +11,26 @@ import (
 	"github.com/golang/glog"
 )
 
-var (
-	etcd_client *etcd.Client
-)
+type Conn struct {
+	Client *etcd.Client
+}
 
-func setEtcdClient(nodes []string) {
-	if len(nodes) == 0 {
-		panic("none machines.")
-	}
-	etcd_client = etcd.NewClient(nodes)
-	// init the client.
-	if _, err := etcd_client.Set(cluster.etcd_dir+cluster.etcd_nodes, "active", cluster.interval); err != nil {
-		panic(err)
+func Connet(machines []string) *Conn {
+	return &Conn{
+		Client: etcd.NewClient(machines),
 	}
 }
 
-func etcd_hb(dir, key string, interval time.Duration) chan byte {
+func (c *Conn) Set(key, value string, ttl time.Duration) error {
+	_, err := etcd_client.Set(key, value, ttl)
+	return err
+}
+
+func (c *Conn) Get() {}
+
+func (c *Conn) IntervalUpdate(key, value string, interval time.Duration) (stop chan bool) {
 	timer := time.NewTicker(interval / 2)
-	stop := make(chan byte)
+	stop = make(chan bool)
 	go func() {
 		for {
 			select {
@@ -45,7 +47,6 @@ func etcd_hb(dir, key string, interval time.Duration) chan byte {
 	return stop
 }
 
-func cas(key, value, prevValue string) error {
-	_, err := etcd_client.CompareAndSwap(key, value, ttl, prevValue, 0)
-	return err
-}
+func (c *Conn) Watch() {}
+
+func (c *Conn) CompareAndSwap() {}
