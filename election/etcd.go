@@ -7,45 +7,42 @@ package election
 import (
 	"time"
 
-	"github.com/coreos/go-etcd/etcd"
+	myetcd "github.com/Alienero/quick-know/etcd"
+
+	// "github.com/coreos/go-etcd/etcd"
 	"github.com/golang/glog"
 )
 
 var (
-	etcd_client *etcd.Client
+	etcd_client *myetcd.Conn
 )
 
-func setEtcdClient(nodes []string) {
-	if len(nodes) == 0 {
-		panic("none machines.")
-	}
-	etcd_client = etcd.NewClient(nodes)
+func setEtcdClient(nodes []string) error {
 	// init the client.
-	if _, err := etcd_client.Set(cluster.etcd_dir+cluster.etcd_nodes, "active", cluster.interval); err != nil {
-		panic(err)
-	}
-}
-
-func etcd_hb(dir, key string, interval time.Duration) chan byte {
-	timer := time.NewTicker(interval / 2)
-	stop := make(chan byte)
-	go func() {
-		for {
-			select {
-			case <-timer.C:
-				// Heart beat and update the etcd node's infomation.
-				if _, err = etcd_client.Update(dir, key, interval); err != nil {
-					glog.Fatalf("Comet system will be closed ,err:%v\n", err)
-				}
-			case <-stop:
-				timer.Stop()
-			}
-		}
-	}()
-	return stop
-}
-
-func cas(key, value, prevValue string) error {
-	_, err := etcd_client.CompareAndSwap(key, value, ttl, prevValue, 0)
+	etcd_client, err := myetcd.InitClient(machines, cluster.etcd_dir, cluster.etcd_nodes, "active", cluster.interval)
 	return err
 }
+
+// func etcd_hb(dir, key string, interval time.Duration) chan byte {
+// 	timer := time.NewTicker(interval / 2)
+// 	stop := make(chan byte)
+// 	go func() {
+// 		for {
+// 			select {
+// 			case <-timer.C:
+// 				// Heart beat and update the etcd node's infomation.
+// 				if _, err = etcd_client.Update(dir, key, interval); err != nil {
+// 					glog.Fatalf("Comet system will be closed ,err:%v\n", err)
+// 				}
+// 			case <-stop:
+// 				timer.Stop()
+// 			}
+// 		}
+// 	}()
+// 	return stop
+// }
+
+// func cas(key, value, prevValue string) error {
+// 	_, err := etcd_client.CompareAndSwap(key, value, ttl, prevValue, 0)
+// 	return err
+// }
