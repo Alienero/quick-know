@@ -18,14 +18,14 @@ type Cluster struct {
 	interval    time.Duration
 }
 
-func GetCluster() {}
-
 type Node struct {
 }
 
 func NewNode() *Node {
 	return &Node{}
 }
+
+func (n *Node) GetCluster() {}
 
 var (
 	node    *Node

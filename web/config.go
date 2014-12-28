@@ -5,11 +5,11 @@
 package main
 
 import (
-	// "encoding/json"
 	"flag"
 	"strings"
 
 	"github.com/Alienero/quick-know/store"
+	"github.com/Alienero/quick-know/store/define"
 	"github.com/Alienero/quick-know/utils/json"
 	"github.com/Alienero/quick-know/web/config"
 )
@@ -29,14 +29,7 @@ func InitConf() error {
 	// Init etcd client.
 	Conf.Etcd_addr = strings.Split(etcd_addr_temp, ",")
 	init_etcd()
-	// Get store config.
-	storeConf, err := getStore()
-	if err != nil {
-		return err
-	}
-	if err := store.Init([]byte(storeConf)); err != nil {
-		return err
-	}
+
 	// Get web config.
 	// Get listener's config.
 	if err := json.Getter(getListener, &Conf.Listener); err != nil {
@@ -50,6 +43,17 @@ func InitConf() error {
 	if err := json.Getter(getEtcd, &Conf.Etcd); err != nil {
 		return err
 	}
+
+	// Get store config.
+	storeConf, err := getStore()
+	if err != nil {
+		return err
+	}
+	if err := store.Init([]byte(storeConf)); err != nil {
+		return err
+	}
+	// Set store key.
+	define.SetKey(Conf.Listener.Listen_addr)
 
 	return etcd_hb()
 }

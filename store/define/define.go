@@ -5,7 +5,11 @@
 package define
 
 import (
+	"crypto/sha1"
+	"fmt"
+	"io"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -53,6 +57,13 @@ type Sub_map struct {
 }
 
 var lock = new(sync.Mutex)
+var key string
+
+func SetKey(addr string) {
+	h := sha1.New()
+	io.WriteString(h, strconv.FormatInt(time.Now().UTC().UnixNano(), 36)+addr)
+	key = strings.Replace(fmt.Sprintf("% x", h.Sum(nil)), " ", "", -1)
+}
 
 func Get_uuid() string {
 	lock.Lock()
