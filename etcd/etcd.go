@@ -24,7 +24,7 @@ func Connet(machines []string) *Conn {
 
 func InitClient(machines []string, dir, key, value string, ttl time.Duration) (conn *Conn, err error) {
 	conn = Connet(machines)
-	if strings.HasSuffix(dir, "/") {
+	if !strings.HasSuffix(dir, "/") {
 		dir += "/"
 	}
 	return conn, conn.Set(dir+key, value, ttl)
@@ -38,6 +38,11 @@ func (c *Conn) Set(key, value string, ttl time.Duration) error {
 func (c *Conn) Get(key string) (string, error) {
 	resp, err := c.Client.Get(key, false, false)
 	return resp.Node.Value, err
+}
+
+func (c *Conn) Create(key, value string, ttl time.Duration) error {
+	_, err := c.Client.Create(key, value, uint64(ttl))
+	return err
 }
 
 func (c *Conn) GetAll(key string) (etcd.Nodes, error) {
