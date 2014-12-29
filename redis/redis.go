@@ -17,13 +17,7 @@ type Redis struct {
 }
 
 func NewRedis(jconf string) (*Redis, error) {
-	conf := struct {
-		// Redis conf
-		Network    string
-		Address    string
-		MaxIde     int
-		IdeTimeout int // Second.
-	}{}
+	conf := RedisConf{}
 	if err := json.Unmarshal([]byte(jconf), &conf); err != nil {
 		return nil, err
 	}
