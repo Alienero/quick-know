@@ -6,7 +6,6 @@ package config
 
 const (
 	// Comet configs.
-	Etcd_comet_redis  = "/quick-know/comet_redis_conf"
 	Etcd_comet_etcd   = "/quick-know/comet_etcd_conf"
 	Etcd_comet_rest   = "/quick-know/comet_rest_conf"
 	Etcd_comet_listen = "/quick-know/comet_listen_conf"
@@ -17,4 +16,7 @@ const (
 
 	// Store configs.
 	Etcd_store = "/quick-know/store_conf"
+
+	// Redis config.
+	Etcd_redis = "/quick-know/redis_conf"
 )

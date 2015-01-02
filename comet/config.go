@@ -42,9 +42,9 @@ func InitConf() error {
 		return err
 	}
 	// Get the redis config.
-	if err := json.Getter(getRedisConf, &Conf.Redis); err != nil {
-		return err
-	}
+	// if err := json.Getter(getRedisConf, &Conf.Redis); err != nil {
+	// 	return err
+	// }
 	// Get the Restrictiont config.
 	if err := json.Getter(getRestrictiontConf, &Conf.Restriction); err != nil {
 		return err

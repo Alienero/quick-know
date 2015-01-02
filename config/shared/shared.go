@@ -18,6 +18,7 @@ import (
 	// Import config define
 	comet "github.com/Alienero/quick-know/comet/config"
 	define "github.com/Alienero/quick-know/config"
+	redis "github.com/Alienero/quick-know/redis"
 	store "github.com/Alienero/quick-know/store/define"
 	web "github.com/Alienero/quick-know/web/config"
 
@@ -52,7 +53,7 @@ type config struct {
 
 	Comet struct {
 		comet.Etcd
-		comet.Redis
+		// comet.Redis
 		comet.Restriction
 		comet.Listener
 	}
@@ -62,6 +63,7 @@ type config struct {
 		comet.Listener
 	}
 	Store store.DBConfig
+	Redis redis.Redis
 }
 
 func main() {
@@ -90,11 +92,11 @@ func main() {
 		logger.Fatal(err)
 	}
 	logger.Println("Done.")
-	logger.Println("->Do comet.Redis")
-	if err := setNode(define.Etcd_comet_redis, &Conf.Comet.Redis); err != nil {
-		logger.Fatal(err)
-	}
-	logger.Println("Done.")
+	// logger.Println("->Do comet.Redis")
+	// if err := setNode(define.Etcd_comet_redis, &Conf.Comet.Redis); err != nil {
+	// 	logger.Fatal(err)
+	// }
+	// logger.Println("Done.")
 	logger.Println("->Do comet.Restriction")
 	if err := setNode(define.Etcd_comet_rest, &Conf.Comet.Restriction); err != nil {
 		logger.Fatal(err)
@@ -120,6 +122,12 @@ func main() {
 	logger.Println("Set Store's config...")
 	logger.Println("->Do store")
 	if err := setNode(define.Etcd_store, &Conf.Store); err != nil {
+		logger.Fatal(err)
+	}
+	logger.Println("Done.")
+	logger.Println("Set Redis's config...")
+	logger.Println("->Do redis")
+	if err := setNode(define.Etcd_redis, &Conf.Redis); err != nil {
 		logger.Fatal(err)
 	}
 	logger.Println("Done.")

@@ -7,7 +7,7 @@ package config
 type Config struct {
 	Listener
 	Restriction
-	Redis
+	// Redis
 	Etcd
 }
 
@@ -28,13 +28,13 @@ type Restriction struct {
 	WriteTimeout     int
 }
 
-type Redis struct {
-	// Redis conf
-	Network    string
-	Address    string
-	MaxIde     int
-	IdeTimeout int // Second.
-}
+// type Redis struct {
+// 	// Redis conf
+// 	Network    string
+// 	Address    string
+// 	MaxIde     int
+// 	IdeTimeout int // Second.
+// }
 
 type Etcd struct {
 	// Etcd conf.
