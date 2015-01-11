@@ -69,9 +69,9 @@ func newClient(r *bufio.Reader, w *bufio.Writer, conn net.Conn, id string, alive
 // Push the msg and response the heart beat
 func (c *client) listen_loop() (e error) {
 	defer func() {
-		err := redis_logout(c.id)
+		err := redis.Logout(c.id, Conf.RPC_addr)
 		if err != nil {
-			err = redis_logout(c.id)
+			err = redis.Logout(c.id, Conf.RPC_addr)
 			if err != nil {
 				glog.Errorf("Redis conn error:%v", err)
 			}

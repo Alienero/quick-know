@@ -45,6 +45,13 @@ func InitConf() error {
 	// if err := json.Getter(getRedisConf, &Conf.Redis); err != nil {
 	// 	return err
 	// }
+	if jconfig, err := getRedisConf(); err != nil {
+		return err
+	} else {
+		if err := init_redis(jconfig); err != nil {
+			return err
+		}
+	}
 	// Get the Restrictiont config.
 	if err := json.Getter(getRestrictiontConf, &Conf.Restriction); err != nil {
 		return err

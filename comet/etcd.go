@@ -33,7 +33,7 @@ func etcd_hb() error {
 			select {
 			case <-c_time.C:
 				// Flush the etcd node time.
-				if _, err = etcd_client.Update(Conf.Etcd_dir+"/"+Conf.Etcd_addr, strconv.Itoa(Users.Len()), Conf.Etcd_interval); err != nil {
+				if _, err = etcd_client.Update(Conf.Etcd_dir+"/"+Conf.Listen_addr, strconv.Itoa(Users.Len()), Conf.Etcd_interval); err != nil {
 					glog.Fatalf("Comet system will be closed ,err:%v\n", err)
 				}
 			}
@@ -51,7 +51,7 @@ func getStoreConf() (string, error) {
 }
 
 func getRedisConf() (string, error) {
-	resp, err := etcd_client.Get(define.Etcd_comet_redis, false, false)
+	resp, err := etcd_client.Get(define.Etcd_redis, false, false)
 	if err != nil {
 		return "", err
 	}

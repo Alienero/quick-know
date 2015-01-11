@@ -96,7 +96,7 @@ func (c *Comet_RPC) WriteMsg(msg *define.Msg, r *myrpc.Reply) (err error) {
 		msg.Expired = time.Now().UTC().Add(time.Duration(msg.Expired)).Unix()
 	}
 	// Check the user whether online.
-	b, addr, err := redis_isExist(msg.To_id)
+	b, addr, err := redis.IsExist(msg.To_id)
 	if !b {
 		if err != nil {
 			glog.Error(err)

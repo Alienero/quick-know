@@ -173,7 +173,7 @@ func login(r *bufio.Reader, w *bufio.Writer, conn net.Conn, typ int) (l listener
 			s  string
 		)
 	re:
-		ok, s, err = redis_isExist(*id)
+		ok, s, err = redis.IsExist(*id)
 		if err != nil {
 			return
 		}
@@ -199,7 +199,7 @@ func login(r *bufio.Reader, w *bufio.Writer, conn net.Conn, typ int) (l listener
 
 		c := newClient(r, w, conn, *id, info.GetKeepAlive())
 		// Redis Append.
-		if err = redis_login(*id); err != nil {
+		if err = redis.Login(*id, Conf.RPC_addr); err != nil {
 			return
 		}
 		Users.Set(*id, c)
