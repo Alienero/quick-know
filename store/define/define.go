@@ -14,6 +14,12 @@ import (
 	"time"
 )
 
+const (
+	// Client requst type
+	OFFLINE = 41
+	ONLINE  = 42
+)
+
 type Msg struct {
 	Msg_id int    // Msg ID
 	Owner  string // Owner

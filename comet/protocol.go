@@ -7,8 +7,4 @@ package main
 const (
 	CLIENT  = 0
 	CSERVER = 1
-
-	// Client requst type
-	OFFLINE = 41
-	ONLINE  = 42
 )

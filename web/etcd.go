@@ -72,3 +72,11 @@ func getListener() (string, error) {
 	}
 	return resp.Node.Value, nil
 }
+
+func getRedisConf() (string, error) {
+	resp, err := client.Get(config.Etcd_redis, false, false)
+	if err != nil {
+		return "", err
+	}
+	return resp.Node.Value, nil
+}

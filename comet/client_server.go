@@ -160,13 +160,13 @@ loop:
 	// Write the onlines msg to the db
 	for _, v := range c.onlineCache {
 		// Add the offline msg id
-		v.Typ = OFFLINE
+		v.Typ = define.OFFLINE
 		store.Manager.InsertOfflineMsg(v)
 	}
 	// Flush the channel.
 	for len(c.onlines) > 0 {
 		msg := <-c.onlines
-		msg.Typ = OFFLINE
+		msg.Typ = define.OFFLINE
 		store.Manager.InsertOfflineMsg(msg)
 	}
 	glog.Info("Cleaned the online msgs channel.")
@@ -252,7 +252,7 @@ func (c *client) waitOnline(msg *define.Msg) (err error) {
 		return
 	}
 	msg.Msg_id = mid
-	msg.Typ = ONLINE
+	msg.Typ = define.ONLINE
 	c.onlineCache[msg.Msg_id] = msg
 	err = c.pushMsg(msg)
 	c.counter++

@@ -52,6 +52,14 @@ func InitConf() error {
 	if err := store.Init([]byte(storeConf)); err != nil {
 		return err
 	}
+	// Get redis config.
+	if jconf, err := getRedisConf(); err != nil {
+		return err
+	} else {
+		if err := init_redis(jconf); err != nil {
+			return err
+		}
+	}
 	// Set store key.
 	define.SetKey(Conf.Listener.Listen_addr)
 

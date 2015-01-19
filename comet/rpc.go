@@ -61,7 +61,7 @@ func (*Comet_RPC) WriteOnlineMsg(msg *define.Msg, r *myrpc.Reply) (err error) {
 
 	c := Users.Get(msg.To_id)
 	if c == nil {
-		msg.Typ = OFFLINE
+		msg.Typ = define.OFFLINE
 		// Get the offline msg id
 		err = store.Manager.InsertOfflineMsg(msg)
 		return
@@ -70,7 +70,7 @@ func (*Comet_RPC) WriteOnlineMsg(msg *define.Msg, r *myrpc.Reply) (err error) {
 	c.lock.Lock()
 	if len(c.onlines) == Conf.MaxCacheMsg {
 		c.lock.Unlock()
-		msg.Typ = OFFLINE
+		msg.Typ = define.OFFLINE
 		err = store.Manager.InsertOfflineMsg(msg)
 		return
 	} else {
@@ -79,10 +79,10 @@ func (*Comet_RPC) WriteOnlineMsg(msg *define.Msg, r *myrpc.Reply) (err error) {
 	c.lock.Lock()
 	if c.isStop {
 		c.lock.Unlock()
-		msg.Typ = OFFLINE
+		msg.Typ = define.OFFLINE
 		err = store.Manager.InsertOfflineMsg(msg)
 	} else {
-		msg.Typ = ONLINE
+		msg.Typ = define.ONLINE
 		c.onlines <- msg
 		c.lock.Unlock()
 	}

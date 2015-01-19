@@ -15,6 +15,7 @@ import (
 	"net/rpc"
 
 	myrpc "github.com/Alienero/quick-know/rpc"
+	"github.com/Alienero/quick-know/store"
 	"github.com/Alienero/quick-know/store/define"
 )
 
@@ -38,6 +39,19 @@ func get_comet() (string, error) {
 }
 
 func write_msg(msg *define.Msg) error {
+	//  Check the user online.
+	b, addr, err := redis.IsExist(msg.To_id)
+	if !b {
+		if err != nil {
+			return err
+		}
+		// User is offline.
+		return writeOfflineMsg(msg)
+	}
+	return writeByAddr(msg, addr)
+}
+
+func writeByGetComet(msg *define.Msg) error {
 	addr, err := get_comet()
 	if err != nil {
 		return err
@@ -54,4 +68,24 @@ func write_msg(msg *define.Msg) error {
 		err = errors.New("RPC:wirte msg fail")
 	}
 	return err
+}
+
+func writeByAddr(msg *define.Msg, addr string) error {
+	c, err := rpc.DialHTTP("tcp", addr)
+	if err != nil {
+		return err
+	}
+	reply := new(myrpc.Reply)
+	if err = c.Call("Comet_RPC.WriteMsg", msg, reply); err != nil {
+		return err
+	}
+	if !reply.IsOk {
+		err = errors.New("RPC:wirte msg fail")
+	}
+	return err
+}
+
+func writeOfflineMsg(msg *define.Msg) error {
+	msg.Typ = define.OFFLINE
+	return store.Manager.InsertOfflineMsg(msg)
 }
