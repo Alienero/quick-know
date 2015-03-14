@@ -10,8 +10,9 @@ import (
 	"io"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
+
+	"github.com/nu7hatch/gouuid"
 )
 
 const (
@@ -21,6 +22,7 @@ const (
 )
 
 type Msg struct {
+	Id     string
 	Msg_id int    // Msg ID
 	Owner  string // Owner
 	To_id  string
@@ -34,8 +36,9 @@ type Msg struct {
 }
 
 type Msg_id struct {
-	Id string
-	M  *Msg
+	// Id    string
+	IsSub bool
+	M     *Msg
 }
 
 type User struct {
@@ -62,7 +65,12 @@ type Sub_map struct {
 	User_id string
 }
 
-var lock = new(sync.Mutex)
+type SubMsgs struct {
+	Id    string
+	Count int64
+	M     *Msg
+}
+
 var key string
 
 func SetKey(addr string) {
@@ -72,7 +80,9 @@ func SetKey(addr string) {
 }
 
 func Get_uuid() string {
-	lock.Lock()
-	defer lock.Unlock()
-	return strconv.FormatInt(time.Now().UTC().UnixNano(), 36)
+	uu, err := uuid.NewV4()
+	if err != nil {
+		panic(err)
+	}
+	return uu.String()
 }

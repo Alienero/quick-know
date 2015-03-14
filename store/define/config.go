@@ -20,6 +20,7 @@ type DBConfig struct {
 	OfflineName string // Collection name.
 	SubName     string // Collection name.
 	SubsName    string // Collection name.
+	SubMsgName  string // Collection name.
 
 	OfflineMsgs int // The max of the offline msgs.
 }

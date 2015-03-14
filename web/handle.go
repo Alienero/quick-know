@@ -26,7 +26,7 @@ var (
 // Push a private msg
 func private_msg(w http.ResponseWriter, r *http.Request, u *user) {
 	glog.Info("Add a private msg.")
-	msg := new(define.Msg)
+	msg := newMsg()
 	r.ParseForm()
 	msg.To_id = r.FormValue("to_id")
 	glog.Infof("To_id is :%v", msg.To_id)
@@ -166,7 +166,7 @@ func rm_user_sub(w http.ResponseWriter, r *http.Request, uu *user) {
 // Send msg to all
 func broadcast(w http.ResponseWriter, r *http.Request, uu *user) {
 	glog.Info("Send a msg to all.")
-	msg := new(define.Msg)
+	msg := newMsg()
 	msg.Topic = Inf_All
 	r.ParseForm()
 	if s := r.FormValue("expired"); s != "" {
@@ -201,7 +201,7 @@ func broadcast(w http.ResponseWriter, r *http.Request, uu *user) {
 // Send msg to sub group
 func group_msg(w http.ResponseWriter, r *http.Request, uu *user) {
 	glog.Info("add a msg to a group.")
-	msg := new(define.Msg)
+	msg := newMsg()
 	r.ParseForm()
 	sub_id := r.FormValue("sub_id")
 	if s := r.FormValue("expired"); s != "" {
@@ -238,4 +238,14 @@ func group_msg(w http.ResponseWriter, r *http.Request, uu *user) {
 
 func badReaquest(w http.ResponseWriter, err string) {
 	http.Error(w, err, http.StatusBadRequest)
+}
+
+func newMsg() *define.Msg {
+	id, err := getID()
+	if err != nil {
+		panic(err)
+	}
+	return &define.Msg{
+		Id: id,
+	}
 }

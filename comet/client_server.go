@@ -210,7 +210,7 @@ func (c *client) waitOffline(msg_id *define.Msg_id) (err error) {
 			// cancel send the msg
 			glog.Info("Out of time.")
 			// TODO Del the offline msg
-			store.Manager.DelOfflineMsg(msg_id.Id)
+			store.Manager.DelOfflineMsg(msg_id.M.Id)
 			return
 		}
 	}
@@ -218,7 +218,7 @@ func (c *client) waitOffline(msg_id *define.Msg_id) (err error) {
 	if msg.Msg_id == -1 {
 		return
 	}
-	c.offline_map[msg.Msg_id] = msg_id.Id
+	c.offline_map[msg.Msg_id] = msg_id.M.Id
 	// Push the offline msg
 	glog.Info("Get a offline msg")
 	// Set the msg id

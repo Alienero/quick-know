@@ -68,7 +68,7 @@ func (mongo *Mongodb) GetOfflineMsg(id string, fin <-chan byte) (<-chan *Msg_id,
 func (mongo *Mongodb) DelOfflineMsg(id string) error {
 	c := mongo.sei_msg.DB(Config.MsgName).C(Config.OfflineName)
 	defer mongo.sei_msg.Refresh()
-	err := c.Remove(bson.M{"id": id})
+	err := c.Remove(bson.M{"m.id": id})
 	if err != nil {
 		return fmt.Errorf("Remove a offline msg(id:%v) error:%v", id, err)
 	}
@@ -78,15 +78,25 @@ func (mongo *Mongodb) DelOfflineMsg(id string) error {
 // Intert a new offilne msg
 // Before should check the to_id belong the user
 func (mongo *Mongodb) InsertOfflineMsg(msg *Msg) error {
+	return mongo.insert(msg, false)
+}
+
+// TODO:
+func (mongo *Mongodb) InsertSubOfflineMsg(msg *Msg, subId string) error {
+	return nil
+}
+
+func (mongo *Mongodb) insert(msg *Msg, isSub bool) error {
 	c := mongo.sei_msg.DB(Config.MsgName).C(Config.OfflineName)
 	defer mongo.sei_msg.Refresh()
-	id := Get_uuid()
+	// id := Get_uuid()
 	err := c.Insert(&Msg_id{
-		M:  msg,
-		Id: id,
+		M: msg,
+		// Id:    id,
+		IsSub: isSub,
 	})
 	if err != nil {
-		return fmt.Errorf("Intert a offline msg(id:%v) error:%v", id)
+		return fmt.Errorf("Intert a offline msg(id:%v) error:%v", msg.Id)
 	}
 	return nil
 }
