@@ -33,13 +33,16 @@ type Msg struct {
 	Dup byte // mqtt dup
 
 	Expired int64
+
+	// sub msgs.
+	IsSub bool
 }
 
-type Msg_id struct {
-	// Id    string
-	IsSub bool
-	M     *Msg
-}
+// type Msg_id struct {
+// 	// Id    string
+// 	IsSub bool
+// 	M     *Msg
+// }
 
 type User struct {
 	Id    string
@@ -68,7 +71,7 @@ type Sub_map struct {
 type SubMsgs struct {
 	Id    string
 	Count int64
-	M     *Msg
+	Body  []byte
 }
 
 var key string
