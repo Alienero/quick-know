@@ -64,8 +64,9 @@ func (mongo *Mongodb) DelUser(id string, own string) error {
 		return err
 	}
 
-	c := mongo.sei_msg.DB(Config.MsgName).C(Config.OfflineName)
-	defer mongo.sei_msg.Refresh()
+	sei_msg := mongo.sei_msg.New()
+	c := sei_msg.DB(Config.MsgName).C(Config.OfflineName)
+	defer sei_msg.Refresh()
 	if _, err = c.RemoveAll(bson.M{"m.to_id": id}); err != nil {
 		return err
 	}
@@ -94,6 +95,7 @@ func (mongo *Mongodb) ChanUserID(own string) <-chan string {
 	ch := make(chan string, 100)
 	go func() {
 		sei := mongo.sei_user.New()
+		defer sei.Refresh()
 		it := sei.DB(Config.UserName).C(Config.Clients).Find(bson.M{"owner": own}).Iter()
 		u := new(User)
 		for it.Next(u) {

@@ -27,6 +27,18 @@ func (mongo *Mongodb) GetOfflineMsg(id string, fin <-chan byte) (<-chan *Msg, <-
 		flag := false
 	loop:
 		for iter.Next(msg) {
+			// Get sub's msg body.
+			if msg.IsSub {
+				sei := mongo.sei_msg.New()
+				defer sei.Refresh()
+				sc := sei.DB(Config.MsgName).C(Config.SubMsgName)
+				subM := new(SubMsgs)
+				if err := sc.Find(bson.M{"id": msg.Id}).One(&subM); err != nil {
+					glog.Error(err)
+					continue
+				}
+				msg.Body = subM.Body
+			}
 			select {
 			case ch <- msg:
 				msg = new(Msg)
@@ -66,16 +78,18 @@ func (mongo *Mongodb) GetOfflineMsg(id string, fin <-chan byte) (<-chan *Msg, <-
 
 // Del the offile msg
 func (mongo *Mongodb) DelOfflineMsg(id string) error {
-	c := mongo.sei_msg.DB(Config.MsgName).C(Config.OfflineName)
-	defer mongo.sei_msg.Refresh()
+	sei := mongo.sei_msg.New()
+	c := sei.DB(Config.MsgName).C(Config.OfflineName)
+	defer sei.Refresh()
 	result := new(Msg)
 	if err := c.Find(bson.M{"id": id}).One(result); err != nil {
 		return err
 	}
 	if result.IsSub {
 		// Delete offline sub msg.
+		sei := mongo.sei_msg.New()
 		sc := mongo.sei_msg.DB(Config.MsgName).C(Config.SubMsgName)
-		defer mongo.sei_msg.Refresh()
+		defer sei.Refresh()
 		count := new(SubMsgs)
 		q := bson.M{"id": id}
 		if err := sc.Find(q).One(count); err != nil {
@@ -112,8 +126,9 @@ func (mongo *Mongodb) InsertSubOfflineMsg(msg *Msg, subId string) error {
 }
 
 func (mongo *Mongodb) insert(msg *Msg, isSub bool) error {
-	c := mongo.sei_msg.DB(Config.MsgName).C(Config.OfflineName)
-	defer mongo.sei_msg.Refresh()
+	sei := mongo.sei_msg.New()
+	c := sei.DB(Config.MsgName).C(Config.OfflineName)
+	defer sei.Refresh()
 	// id := Get_uuid()
 	msg.IsSub = isSub
 
