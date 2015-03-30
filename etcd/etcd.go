@@ -69,34 +69,33 @@ func (c *Conn) IntervalUpdate(key, value string, interval time.Duration) (stop c
 	return stop
 }
 
-func (c *Conn) watch(key string, recursive bool, receiver chan *etcd.Response, stop chan bool) error {
-	_, err := c.Client.Watch(key, 0, recursive, receiver, stop)
-	return err
+func (c *Conn) watch(key string, recursive bool, receiver chan *etcd.Response, stop chan bool) {
+	go c.Client.Watch(key, 0, recursive, receiver, stop)
 }
 
-func (c *Conn) WatchByChan(key string, receiver chan *etcd.Response) (stop chan bool, err error) {
+func (c *Conn) WatchByChan(key string, receiver chan *etcd.Response) (stop chan bool) {
 	stop = make(chan bool)
-	err = c.watch(key, false, receiver, stop)
+	c.watch(key, false, receiver, stop)
 	return
 }
 
-func (c *Conn) WatchAll(key string, receiver chan *etcd.Response) (stop chan bool, err error) {
+func (c *Conn) WatchAll(key string, receiver chan *etcd.Response) (stop chan bool) {
 	stop = make(chan bool)
-	err = c.watch(key, true, receiver, stop)
+	c.watch(key, true, receiver, stop)
 	return
 }
 
-func (c *Conn) Watch(key string) (receiver chan *etcd.Response, stop chan bool, err error) {
+func (c *Conn) Watch(key string) (receiver chan *etcd.Response, stop chan bool) {
 	receiver = make(chan *etcd.Response, 10)
 	stop = make(chan bool)
-	err = c.watch(key, false, receiver, stop)
+	c.watch(key, false, receiver, stop)
 	return
 }
 
-func (c *Conn) WatchByBuff(key string, buffer int) (receiver chan *etcd.Response, stop chan bool, err error) {
+func (c *Conn) WatchByBuff(key string, buffer int) (receiver chan *etcd.Response, stop chan bool) {
 	receiver = make(chan *etcd.Response, buffer)
 	stop = make(chan bool)
-	err = c.watch(key, false, receiver, stop)
+	c.watch(key, false, receiver, stop)
 	return
 }
 

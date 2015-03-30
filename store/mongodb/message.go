@@ -129,8 +129,9 @@ func (mongo *Mongodb) insert(msg *Msg, isSub bool) error {
 	sei := mongo.sei_msg.New()
 	c := sei.DB(Config.MsgName).C(Config.OfflineName)
 	defer sei.Refresh()
-	// id := Get_uuid()
-	msg.IsSub = isSub
+	if msg.IsSub {
+		//
+	}
 
 	err := c.Insert(&msg)
 	if err != nil {

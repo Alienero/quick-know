@@ -84,14 +84,14 @@ func (n *Node) watch() (stop chan bool, nw bool, goon bool, lastVaule string) {
 		goon = false
 		return
 	}
-	reciver, stop, err = n.keeper.Watch(cluster.etcd_dir + cluster.etcd_leader)
-	if err != nil {
-		glog.Fatal(err)
-	}
+	reciver, stop = n.keeper.Watch(cluster.etcd_dir + cluster.etcd_leader)
 	// timer := time.NewTimer(d)
 	for {
 		select {
 		case resp := <-reciver:
+			if resp == nil {
+				// Warning!
+			}
 			if resp.Action != "update" {
 				goon = true
 				return
