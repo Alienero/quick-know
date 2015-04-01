@@ -7,6 +7,7 @@ package mongodb
 import (
 	"fmt"
 
+	"github.com/Alienero/glock"
 	. "github.com/Alienero/quick-know/store/define"
 
 	"github.com/golang/glog"
@@ -116,21 +117,30 @@ func (mongo *Mongodb) DelOfflineMsg(id string) error {
 
 // Intert a new offilne msg
 // Before should check the to_id belong the user
-func (mongo *Mongodb) InsertOfflineMsg(msg *Msg) error {
-	return mongo.insert(msg, false)
-}
-
-// TODO:
-func (mongo *Mongodb) InsertSubOfflineMsg(msg *Msg, subId string) error {
-	return nil
-}
-
-func (mongo *Mongodb) insert(msg *Msg, isSub bool) error {
+func (mongo *Mongodb) InsertOfflineMsg(msg *Msg, isSub bool, ip string, etcds []string) error {
 	sei := mongo.sei_msg.New()
 	c := sei.DB(Config.MsgName).C(Config.OfflineName)
 	defer sei.Refresh()
 	if msg.IsSub {
-		//
+		lock := glock.NewMutex(msg.Id, ip, 30, etcds)
+		lock.Lock()
+		// If head msg is not exist, create.
+		sei := mongo.sei_msg.New()
+		c := sei.DB(Config.MsgName).C(Config.SubMsgName)
+		defer sei.Refresh()
+		result := new(SubMsgs)
+		c.Find(bson.M{"id": msg.Id}).One(result)
+		if result.Id != "" {
+			result.Count++
+			c.Update(bson.M{"id": msg.Id}, bson.M{"count": result.Count})
+		} else {
+			result.Id = msg.Id
+			result.Count = 1
+			result.Body = msg.Body
+			c.Insert(result)
+		}
+		lock.Unlock()
+		msg.Body = nil
 	}
 
 	err := c.Insert(&msg)
@@ -139,5 +149,3 @@ func (mongo *Mongodb) insert(msg *Msg, isSub bool) error {
 	}
 	return nil
 }
-
-// TODO sub msg insert and find.

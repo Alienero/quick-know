@@ -25,7 +25,7 @@ type DataStorer interface {
 	// Delete the offline msg.
 	DelOfflineMsg(id string) error
 	// Insert a msg to the database.
-	InsertOfflineMsg(msg *Msg) error
+	InsertOfflineMsg(msg *Msg, isSub bool, ip string, etcds []string) error
 
 	// User
 
