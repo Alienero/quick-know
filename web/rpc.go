@@ -87,5 +87,5 @@ func writeByAddr(msg *define.Msg, addr string) error {
 
 func writeOfflineMsg(msg *define.Msg) error {
 	msg.Typ = define.OFFLINE
-	return store.Manager.InsertOfflineMsg(msg)
+	return store.Manager.InsertOfflineMsg(msg, Conf.Listen_addr, Conf.Etcd_addr)
 }

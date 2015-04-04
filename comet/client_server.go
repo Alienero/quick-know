@@ -26,7 +26,7 @@ type client struct {
 	queue *PackQueue
 	id    string
 
-	offlines <-chan *define.Msg_id
+	offlines <-chan *define.Msg
 	onlines  chan *define.Msg
 	readChan <-chan *packAndErr
 
@@ -56,7 +56,7 @@ func newClient(r *bufio.Reader, w *bufio.Writer, conn net.Conn, id string, alive
 		CloseChan: make(chan byte),
 		lock:      new(sync.Mutex),
 
-		offlines:    make(chan *define.Msg_id, Conf.MaxCacheMsg),
+		offlines:    make(chan *define.Msg, Conf.MaxCacheMsg),
 		onlines:     make(chan *define.Msg, Conf.MaxCacheMsg),
 		offline_map: make(map[int]string),
 
@@ -161,13 +161,13 @@ loop:
 	for _, v := range c.onlineCache {
 		// Add the offline msg id
 		v.Typ = define.OFFLINE
-		store.Manager.InsertOfflineMsg(v)
+		store.Manager.InsertOfflineMsg(v, Conf.RPC_addr, Conf.Etcd_addr)
 	}
 	// Flush the channel.
 	for len(c.onlines) > 0 {
 		msg := <-c.onlines
 		msg.Typ = define.OFFLINE
-		store.Manager.InsertOfflineMsg(msg)
+		store.Manager.InsertOfflineMsg(msg, Conf.RPC_addr, Conf.Etcd_addr)
 	}
 	glog.Info("Cleaned the online msgs channel.")
 	// Close the online msg channel
@@ -202,15 +202,14 @@ func (c *client) getOnlineMsgId() int {
 	}
 }
 
-func (c *client) waitOffline(msg_id *define.Msg_id) (err error) {
-	msg := msg_id.M
+func (c *client) waitOffline(msg *define.Msg) (err error) {
 	// Check the msg time
 	if msg.Expired > 0 {
 		if time.Now().UTC().Unix() > msg.Expired {
 			// cancel send the msg
 			glog.Info("Out of time.")
 			// TODO Del the offline msg
-			store.Manager.DelOfflineMsg(msg_id.M.Id)
+			store.Manager.DelOfflineMsg(msg.Id)
 			return
 		}
 	}
@@ -218,7 +217,7 @@ func (c *client) waitOffline(msg_id *define.Msg_id) (err error) {
 	if msg.Msg_id == -1 {
 		return
 	}
-	c.offline_map[msg.Msg_id] = msg_id.M.Id
+	c.offline_map[msg.Msg_id] = msg.Id
 	// Push the offline msg
 	glog.Info("Get a offline msg")
 	// Set the msg id

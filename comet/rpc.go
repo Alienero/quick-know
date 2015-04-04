@@ -63,7 +63,7 @@ func (*Comet_RPC) WriteOnlineMsg(msg *define.Msg, r *myrpc.Reply) (err error) {
 	if c == nil {
 		msg.Typ = define.OFFLINE
 		// Get the offline msg id
-		err = store.Manager.InsertOfflineMsg(msg)
+		err = store.Manager.InsertOfflineMsg(msg, Conf.RPC_addr, Conf.Etcd_addr)
 		return
 	}
 
@@ -71,7 +71,7 @@ func (*Comet_RPC) WriteOnlineMsg(msg *define.Msg, r *myrpc.Reply) (err error) {
 	if len(c.onlines) == Conf.MaxCacheMsg {
 		c.lock.Unlock()
 		msg.Typ = define.OFFLINE
-		err = store.Manager.InsertOfflineMsg(msg)
+		err = store.Manager.InsertOfflineMsg(msg, Conf.RPC_addr, Conf.Etcd_addr)
 		return
 	} else {
 		c.lock.Unlock()
@@ -80,7 +80,7 @@ func (*Comet_RPC) WriteOnlineMsg(msg *define.Msg, r *myrpc.Reply) (err error) {
 	if c.isStop {
 		c.lock.Unlock()
 		msg.Typ = define.OFFLINE
-		err = store.Manager.InsertOfflineMsg(msg)
+		err = store.Manager.InsertOfflineMsg(msg, Conf.RPC_addr, Conf.Etcd_addr)
 	} else {
 		msg.Typ = define.ONLINE
 		c.onlines <- msg
@@ -102,7 +102,7 @@ func (c *Comet_RPC) WriteMsg(msg *define.Msg, r *myrpc.Reply) (err error) {
 			glog.Error(err)
 		}
 		// User is offline.
-		err = store.Manager.InsertOfflineMsg(msg)
+		err = store.Manager.InsertOfflineMsg(msg, Conf.RPC_addr, Conf.Etcd_addr)
 		if err != nil {
 			glog.Error(err)
 		} else {

@@ -117,7 +117,7 @@ func (mongo *Mongodb) DelOfflineMsg(id string) error {
 
 // Intert a new offilne msg
 // Before should check the to_id belong the user
-func (mongo *Mongodb) InsertOfflineMsg(msg *Msg, isSub bool, ip string, etcds []string) error {
+func (mongo *Mongodb) InsertOfflineMsg(msg *Msg, ip string, etcds []string) error {
 	sei := mongo.sei_msg.New()
 	c := sei.DB(Config.MsgName).C(Config.OfflineName)
 	defer sei.Refresh()

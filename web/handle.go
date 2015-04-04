@@ -167,6 +167,7 @@ func rm_user_sub(w http.ResponseWriter, r *http.Request, uu *user) {
 func broadcast(w http.ResponseWriter, r *http.Request, uu *user) {
 	glog.Info("Send a msg to all.")
 	msg := newMsg()
+	msg.IsSub = true
 	msg.Topic = Inf_All
 	r.ParseForm()
 	if s := r.FormValue("expired"); s != "" {
@@ -202,6 +203,7 @@ func broadcast(w http.ResponseWriter, r *http.Request, uu *user) {
 func group_msg(w http.ResponseWriter, r *http.Request, uu *user) {
 	glog.Info("add a msg to a group.")
 	msg := newMsg()
+	msg.IsSub = true
 	r.ParseForm()
 	sub_id := r.FormValue("sub_id")
 	if s := r.FormValue("expired"); s != "" {
