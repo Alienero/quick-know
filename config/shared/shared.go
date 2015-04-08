@@ -63,7 +63,7 @@ type config struct {
 		comet.Listener
 	}
 	Store store.DBConfig
-	Redis redis.Redis
+	Redis redis.RedisConf
 }
 
 func main() {

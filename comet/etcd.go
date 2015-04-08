@@ -23,7 +23,7 @@ func init_etcd() {
 func etcd_hb() error {
 	flush_time := time.Duration(float64(Conf.Etcd_interval) / 1.5)
 	// Connect the etcd.
-	_, err := etcd_client.Set(Conf.Etcd_dir+"/"+Conf.RPC_addr, "0", Conf.Etcd_interval)
+	_, err := etcd_client.Set(Conf.Etcd_dir+"/"+Conf.Listen_addr, "0", Conf.Etcd_interval)
 	if err != nil {
 		return err
 	}
