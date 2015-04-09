@@ -31,8 +31,8 @@ func (*Comet_RPC) Relogin(id string, r *myrpc.Reply) error {
 			c.isLetClose = true
 			c.lock.Unlock()
 			select {
-			case c.CloseChan <- 1:
-				<-c.CloseChan
+			case c.closeChan <- 1:
+				<-c.closeChan
 				r.IsOk = true
 				glog.Info("RPC: Ok will be relogin.")
 			case <-time.After(2 * time.Second):

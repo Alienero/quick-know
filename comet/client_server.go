@@ -34,7 +34,7 @@ type client struct {
 	offlineNum  int // The max of once send the offline msgs.
 	offline_map map[int]string
 
-	CloseChan   chan byte // Other gorountine Call notice exit
+	closeChan   chan byte // Other gorountine Call notice exit
 	isSendClose bool      // Wheather has a new login user.
 	isLetClose  bool      // Wheather has relogin.
 
@@ -53,7 +53,7 @@ func newClient(r *bufio.Reader, w *bufio.Writer, conn net.Conn, id string, alive
 	return &client{
 		queue:     NewPackQueue(r, w, conn, alive),
 		id:        id,
-		CloseChan: make(chan byte),
+		closeChan: make(chan byte),
 		lock:      new(sync.Mutex),
 
 		offlines:    make(chan *define.Msg, Conf.MaxCacheMsg),
@@ -77,7 +77,7 @@ func (c *client) listen_loop() (e error) {
 			}
 			Users.Del(c.id)
 			if c.isSendClose {
-				c.CloseChan <- 0
+				c.closeChan <- 0
 			}
 		}
 	}()
@@ -123,7 +123,7 @@ loop:
 					glog.Error("Get a connection error , will break(%v)", err)
 					break loop
 				}
-			case <-c.CloseChan:
+			case <-c.closeChan:
 				c.waitQuit()
 				break loop
 			}
@@ -139,7 +139,7 @@ loop:
 					glog.Error(err)
 					break loop
 				}
-			case <-c.CloseChan:
+			case <-c.closeChan:
 				c.waitQuit()
 				break loop
 			}
@@ -172,7 +172,7 @@ loop:
 	glog.Info("Cleaned the online msgs channel.")
 	// Close the online msg channel
 	close(c.onlines)
-	close(c.CloseChan)
+	close(c.closeChan)
 	glog.Info("Groutine will esc.")
 	return
 }
