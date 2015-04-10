@@ -108,8 +108,8 @@ loop:
 					glog.Error(err)
 					break loop
 				}
-			case msg_id := <-c.offlines:
-				if err = c.waitOffline(msg_id); err != nil {
+			case msg := <-c.offlines:
+				if err = c.waitOffline(msg); err != nil {
 					glog.Error(err)
 					break loop
 				}
