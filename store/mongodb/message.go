@@ -108,7 +108,7 @@ func (mongo *Mongodb) DelOfflineMsg(id string) error {
 		}
 
 	}
-	err := c.Remove(bson.M{"m.id": id})
+	err := c.Remove(bson.M{"id": id})
 	if err != nil {
 		return fmt.Errorf("Remove a offline msg(id:%v) error:%v", id, err)
 	}
