@@ -22,3 +22,6 @@ Quick-Know是一个高可用的推送集群服务。
 
 ##架构
 ![quick-know](https://raw.githubusercontent.com/Alienero/quick-know/master/Documentation/img/qk.png "Quick-know")
+
+## 快速开始
+[中文](https://github.com/Alienero/quick-know/blob/master/Documentation/quick_start.md)
