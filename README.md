@@ -2,7 +2,7 @@ Quick-Know
 ==========
 QK is a High Available push server cluster
 
-##Features
+## Features
  * Support push private message   
  * Support subscription message group   
  * Support a key multi subscription   

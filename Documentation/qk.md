@@ -1,9 +1,9 @@
-#Quick-Know 中文文档
+# Quick-Know 中文文档
 
 Quick-Know是一个高可用的推送集群服务。
 可创建多个App级用户，其下可以创建多个Client终端用户。Client级用户的消息由App级用户进行管理和消息推送。
 
-##特性
+## 特性
 - 易部署
 - 使用Etcd做故障转移及配置文件的分享
 - 多数据库支持
@@ -20,7 +20,7 @@ Quick-Know是一个高可用的推送集群服务。
 - 应用层心跳，保证用户在线可靠性
 - 完善的Restful API，为用户提供全面的对App操作
 
-##架构
+## 架构
 ![quick-know](https://raw.githubusercontent.com/Alienero/quick-know/master/Documentation/img/qk.png "Quick-know")
 
 ## 快速开始
